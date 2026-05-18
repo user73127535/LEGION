@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LEGION — Intelligence for Squad Play</title>
+  <link rel="stylesheet" href="dossier.css" />
+  <style>
+    body { display: flex; flex-direction: column; }
+
+    /* ── HERO ── */
+    .hero {
+      flex: 1;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center;
+      padding: 100px 24px 72px;
+      min-height: 72vh;
+      position: relative;
+      overflow: hidden;
+    }
+    /* hero-bg-grid removed — body's bg-grid-page now handles the pattern
+       uniformly top-to-bottom, matching about.html. */
+    .classification {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 4px;
+      color: var(--muted);
+      margin-bottom: 32px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      position: relative;
+    }
+    .classification::before, .classification::after {
+      content: ''; height: 1px; width: 44px; background: var(--border);
+    }
+    .hero h1 {
+      font-family: var(--font-display);
+      font-size: clamp(64px, 11vw, 128px);
+      font-weight: 700;
+      letter-spacing: 12px;
+      line-height: 1;
+      margin-bottom: 28px;
+      color: var(--text);
+      position: relative;
+    }
+    /* hero classification block — handle markings under banner */
+    .hero-handle-row {
+      display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
+      margin-top: 18px;
+      position: relative;
+    }
+    .hero .tagline {
+      font-family: var(--font-display);
+      font-size: clamp(20px, 2.2vw, 26px);
+      color: var(--text);
+      max-width: 640px;
+      line-height: 1.4;
+      margin-bottom: 14px;
+      font-weight: 500;
+      letter-spacing: -0.3px;
+      position: relative;
+    }
+    .hero .tagline-sub {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      color: var(--muted);
+      max-width: 540px;
+      line-height: 1.8;
+      margin-bottom: 52px;
+      position: relative;
+    }
+    .cta-group {
+      display: flex; flex-direction: column; gap: 18px;
+      align-items: center; justify-content: center;
+      position: relative;
+    }
+    .cta-secondary-link {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      text-decoration: none;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 2px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .cta-secondary-link:hover { color: var(--text); border-color: var(--text); }
+
+    /* ── STATS STRIP ── */
+    .stats-strip {
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-alt);
+    }
+    .stats-strip-inner {
+      max-width: 1040px; margin: 0 auto;
+      padding: 36px 24px;
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px;
+      text-align: center;
+    }
+    .stat-block {
+      border-right: 1px solid var(--border);
+      padding: 0 16px;
+    }
+    .stat-block:last-child { border-right: none; }
+    .stat-block-value {
+      font-family: var(--font-stat);
+      font-size: 38px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+    .stat-block-label {
+      font-family: var(--font-mono);
+      font-size: 10px; letter-spacing: 2px; color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    /* ── FEATURES ── */
+    .features {
+      max-width: 1040px; margin: 0 auto;
+      padding: 96px 24px 48px;
+    }
+    .features-intro { text-align: center; margin-bottom: 56px; }
+    .features-intro h2 {
+      font-family: var(--font-display);
+      font-size: clamp(32px, 4vw, 44px);
+      font-weight: 700;
+      letter-spacing: -1px;
+      margin-bottom: 12px;
+    }
+    .features-intro p {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      color: var(--muted);
+      max-width: 520px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+    .features-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px;
+    }
+    .feature {
+      padding: 32px 28px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      position: relative;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .feature:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+    .feature-number {
+      font-family: var(--font-mono);
+      font-size: 10px; letter-spacing: 3px; color: var(--muted); margin-bottom: 20px;
+      text-transform: uppercase; font-weight: 600;
+    }
+    .feature-title {
+      font-family: var(--font-display);
+      font-size: 22px; font-weight: 700; letter-spacing: -0.3px;
+      margin-bottom: 14px; color: var(--text);
+    }
+    .feature-desc {
+      font-family: var(--font-mono);
+      font-size: 13px; line-height: 1.75; color: var(--muted);
+    }
+
+    /* ── HOW IT WORKS ── */
+    .how {
+      max-width: 1040px; margin: 0 auto;
+      padding: 48px 24px 96px;
+    }
+    .how-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px;
+      margin-top: 48px;
+    }
+    .how-step {
+      position: relative;
+      padding-left: 60px;
+    }
+    .how-step-num {
+      position: absolute; left: 0; top: 0;
+      width: 44px; height: 44px;
+      background: var(--text); color: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-stat);
+      font-size: 18px; font-weight: 700;
+      border-radius: var(--radius);
+    }
+    .how-step h3 {
+      font-family: var(--font-display);
+      font-size: 17px; font-weight: 700; letter-spacing: -0.2px;
+      margin-bottom: 8px;
+    }
+    .how-step p {
+      font-family: var(--font-mono);
+      font-size: 13px; line-height: 1.75; color: var(--muted);
+    }
+
+    /* ── TEASER ── */
+    .teaser {
+      border-top: 1px solid var(--border);
+      padding: 72px 24px;
+      text-align: center;
+      background: var(--bg-alt);
+    }
+    .teaser h3 {
+      font-family: var(--font-display);
+      font-size: clamp(24px, 3vw, 32px);
+      font-weight: 700; letter-spacing: -0.5px;
+      margin-bottom: 16px;
+    }
+    .teaser p {
+      font-family: var(--font-mono);
+      font-size: 13px; color: var(--muted);
+      max-width: 420px; margin: 0 auto 32px;
+      line-height: 1.7;
+    }
+    .redacted-lines {
+      max-width: 360px; margin: 36px auto 0;
+      display: flex; flex-direction: column; gap: 9px; align-items: center;
+    }
+    .redacted-bar-wide {
+      height: 9px; background: var(--ink); opacity: 0.78;
+      border-radius: 1px;
+    }
+
+    @media (max-width: 760px) {
+      .stats-strip-inner { grid-template-columns: repeat(2, 1fr); gap: 28px; }
+      .stat-block { border-right: none; border-bottom: 1px solid var(--border); padding-bottom: 20px; }
+      .stat-block:last-child { border-bottom: none; padding-bottom: 0; }
+      .features-grid, .how-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body class="bg-grid-page">
+
+  <header class="site-header">
+    <div class="header-left">
+      <a href="landing.html" class="logo">LEGION</a>
+      <div class="cell-switcher disabled" aria-disabled="true" title="Authenticate to access case files">
+        <button class="cell-switcher-trigger" type="button" tabindex="-1">
+          <span class="cs-redacted-bar"></span>
+          <span class="chev">&#9662;</span>
+        </button>
+      </div>
+      <nav>
+        <a href="briefing.html">Briefing</a>
+        <a href="match-history.html">Operation Log</a>
+        <a href="about.html">About</a>
+      </nav>
+    </div>
+    <div class="header-right">
+      <!-- Logged-out state: single CTA. The Open New File path lives inside
+           authenticate.html's "New Operator" tab, so the right slot has one
+           job. Once logged in, this slot flips to user-badge + Disengage
+           (see briefing.html / match-history.html). -->
+      <a href="authenticate.html" class="header-cta">Authenticate</a>
+    </div>
+  </header>
+
+  <section class="hero">
+    <h1>LEGION</h1>
+    <p class="tagline">Surveillance on cells that queue together.</p>
+    <p class="tagline-sub">
+      LEGION compiles intelligence on cells of two or more cooperating
+      operators. Joint deployments are logged, indexed, and assessed against
+      <span class="redacted-inline" style="height:11px; width:54px; vertical-align:middle;"></span>
+      baselines. Solo activity is out of scope.
+    </p>
+    <div class="cta-group">
+      <a href="authenticate.html" class="btn btn-primary">Open a New File</a>
+      <a href="authenticate.html" class="cta-secondary-link">Already on file? Authenticate &rarr;</a>
+    </div>
+  </section>
+
+  <section class="stats-strip">
+    <div class="stats-strip-inner">
+      <div class="stat-block">
+        <div class="stat-block-value">2.4M</div>
+        <div class="stat-block-label">Matches Filed</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-block-value"><span class="redacted-inline" style="height:30px; width:88px; vertical-align:middle;"></span></div>
+        <div class="stat-block-label">Cells Under Surveillance <span style="opacity:0.6;">[CLASSIFIED]</span></div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-block-value"><span class="redacted-inline" style="height:30px; width:62px; vertical-align:middle;"></span></div>
+        <div class="stat-block-label">Operators on File <span style="opacity:0.6;">[CLASSIFIED]</span></div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-block-value">0</div>
+        <div class="stat-block-label">Solo Reports Filed</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="features">
+    <div class="features-intro">
+      <div class="eyebrow eyebrow-green">&bull; FILE CONTENTS</div>
+      <h2>Intelligence compiled at the cell level.</h2>
+      <p>Every cell file resolves to two living documents, refreshed as new matches are filed under <span class="redacted-inline" style="height:11px; width:48px; vertical-align:middle;"></span>.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature">
+        <div class="feature-number">REPORT-01 &middot; BRIEFING &middot; <span class="redacted-inline" style="height:8px; width:36px; vertical-align:middle;"></span></div>
+        <div class="feature-title">Cell intelligence summary</div>
+        <p class="feature-desc">
+          Joint WR vs. the counterfactual baseline. Operator roster with per-subject subtraction analysis. Champion pools. Pair-level WR matrix. Tilt index and post-loss cohesion decay. Behavioral observations filed by mode and time of day.
+        </p>
+      </div>
+      <div class="feature">
+        <div class="feature-number">REPORT-02 &middot; OPERATION LOG</div>
+        <div class="feature-title">Joint deployments, indexed</div>
+        <p class="feature-desc">
+          Match history scoped to engagements with two or more operators on the same team. Per-match KDA, champion, and damage tabulated by operator. Filterable by theater, outcome, and operator. Solo matches are out of scope and not retained.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    DOCUMENT REF: LGN-2026-<span class="redacted-inline" style="height:8px; width:24px;"></span> &nbsp;//&nbsp; ORIGINATING OFFICE: LEGION/OPS &nbsp;//&nbsp; OVERSIGHT: <span class="redacted-inline" style="height:8px; width:38px;"></span> &nbsp;//&nbsp; DISTRIBUTION LIMITED &nbsp;//&nbsp; DECLASSIFY ON: <span class="redacted-inline" style="height:8px; width:54px;"></span>
+  </footer>
+
+</body>
+</html>

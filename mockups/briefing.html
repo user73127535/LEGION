@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LEGION — Briefing</title>
+  <link rel="stylesheet" href="dossier.css" />
+  <!--
+    EMPTY-STATE NOTE (build phase):
+    When the authenticated operator belongs to zero CELLs, render an
+    intentionally redacted version of this page so the dossier framing
+    is maintained even at empty state. Specifically:
+
+      1. Dark site-header renders normally, but the CELL switcher trigger
+         shows a redacted bar (▮▮▮▮▮ ▾) instead of a cell name, and the
+         dropdown panel says "NO ACTIVE CASE FILES" with one action:
+         "Open a new file →" pointing to /intake.
+
+      2. Page-header bar (Zoo 2 / page-meta) is REPLACED with the same
+         eyebrow + redacted H1 (▮▮▮▮▮▮▮▮▮), page-meta line entirely
+         redacted (one wide black bar). Sticky behavior identical.
+
+      3. Body content area shows a centered empty-state card:
+           CASE FILE: PENDING
+           No active case files on record.
+           Open a new file or join an existing case to populate this
+           briefing.
+           [ Open New File ]   [ Join Existing Case ]
+
+      4. Same pattern applies to match-history.html (Operation Log).
+         The Operation Log's empty state can be even sparser — same
+         redacted header, empty-state panel below.
+
+    Routing-wise: when a logged-in operator hits / or /cells/:id without
+    any CELLs, redirect them to a dedicated empty-cells variant of either
+    briefing or a top-level /cells/new flow — see architecture handoff §6.
+  -->
+
+  <style>
+    /* ═══════════════════════════════════════════════════════
+       DASHBOARD-SPECIFIC STYLES
+       ═══════════════════════════════════════════════════════ */
+
+    .dashboard { max-width: 1160px; margin: 0 auto; padding: 28px 40px 80px; min-width: 0; }
+
+    /* ── PAGE HEADER ──
+       Lives in its own full-width bar (sibling of .dashboard, NOT inside it),
+       so the background + bottom border stretch edge-to-edge of the viewport
+       and don't clip when content scrolls under the sides. Sticks at
+       --header-h (live site-header height, set by JS) — and because its
+       natural position is already right below the dark header, it locks at
+       page load with zero scroll motion. */
+    .page-header-bar {
+      position: sticky;
+      top: var(--header-h, 71px);
+      z-index: 50;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+    }
+    .page-header {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 16px 40px 20px;
+      display: flex; justify-content: space-between; align-items: flex-end;
+      flex-wrap: wrap; gap: 20px;
+    }
+    @media (max-width: 720px) {
+      .page-header { padding: 14px 20px 18px; }
+    }
+    .page-title { margin: 6px 0 8px; }
+    .page-meta {
+      font-family: var(--font-mono);
+      font-size: 13px; color: var(--muted); line-height: 1.6;
+    }
+    .page-meta strong { color: var(--text); font-weight: 600; }
+    .page-meta .meta-divider { margin: 0 10px; color: var(--border); }
+    .sync-meta {
+      display: inline-flex; align-items: center; gap: 7px;
+      color: var(--muted); font-size: 12px; font-weight: 500;
+    }
+    .sync-meta::before {
+      content: ''; width: 7px; height: 7px; border-radius: 50%;
+      background: var(--text);
+    }
+    /* compact inline action button — sits at the end of the page-meta line */
+    .recruit-btn {
+      font-family: var(--font-display);
+      font-size: 10.5px; font-weight: 600; letter-spacing: 1.2px;
+      padding: 4px 10px; border: 1px solid var(--text); background: var(--text);
+      color: var(--bg); cursor: pointer;
+      border-radius: 3px;
+      text-transform: uppercase;
+      transition: opacity 0.15s;
+      vertical-align: middle;
+      display: inline-block;
+      margin-left: 4px;
+    }
+    .recruit-btn:hover { opacity: 0.88; }
+
+    /* ── CELL MEMBERS TABLE ── */
+    .cell-members { margin-bottom: 28px; padding: 0; overflow: hidden; }
+    .cm-head {
+      padding: 20px 26px 16px; border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: baseline; gap: 14px;
+    }
+    .cm-head-left { display: flex; flex-direction: column; gap: 4px; }
+    .cm-title {
+      font-family: var(--font-display);
+      font-size: 18px; font-weight: 700; letter-spacing: -0.2px;
+    }
+    .cm-subtitle { font-family: var(--font-mono); font-size: 11px; color: var(--muted); letter-spacing: 0.5px; }
+    .cm-table { width: 100%; border-collapse: collapse; }
+    .cm-table th {
+      font-family: var(--font-mono);
+      font-size: 10px; letter-spacing: 2px; color: var(--muted);
+      padding: 12px 18px; background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      text-align: left; font-weight: 500;
+    }
+    .cm-table td {
+      padding: 14px 18px; font-family: var(--font-mono); font-size: 13px;
+      border-bottom: 1px solid var(--border-light);
+      vertical-align: middle;
+    }
+    .cm-table tr:last-child td { border-bottom: none; }
+    .cm-table tr.cm-you { background: #fdfbf4; }
+    .cm-table tr.cm-you:hover td, .cm-table tr:not(.cm-you):hover td { background: #faf7ed; }
+    .cm-name {
+      font-family: var(--font-display); font-weight: 600;
+      letter-spacing: 0.3px; font-size: 14px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .cm-you-tag {
+      font-family: var(--font-mono);
+      font-size: 9px; letter-spacing: 2px; padding: 2px 7px;
+      background: var(--text); color: var(--bg); font-weight: 600;
+      border-radius: 2px;
+    }
+    .cm-status { font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; gap: 8px; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .status-active { background: var(--text); }
+    .status-inactive { background: var(--border); }
+    .cm-num { font-family: var(--font-stat); font-weight: 700; font-size: 18px; }
+    .cm-num-pos { color: var(--green); }
+    .cm-num-neg { color: var(--red); }
+
+    /* ── CELL SUMMARY STRIP (inside Cell Members card) ── */
+    .cm-summary {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 0; padding: 0;
+      border-bottom: 1px solid var(--border);
+      background: var(--card);
+    }
+    .cm-summary-cell {
+      padding: 20px 24px;
+      border-right: 1px solid var(--border-light);
+      display: flex; flex-direction: column; justify-content: center;
+    }
+    .cm-summary-cell:last-child { border-right: none; }
+    .cm-summary-label {
+      font-family: var(--font-mono);
+      font-size: 9.5px; letter-spacing: 2.2px; color: var(--muted);
+      margin-bottom: 8px; text-transform: uppercase; font-weight: 600;
+    }
+    .cm-summary-value {
+      font-family: var(--font-stat);
+      font-size: 32px; font-weight: 700; line-height: 1;
+      letter-spacing: -0.8px;
+      margin-bottom: 6px;
+    }
+    .cm-summary-value.positive { color: var(--green); }
+    .cm-summary-value.muted    { color: var(--muted-light); }
+    .cm-summary-note {
+      font-family: var(--font-mono);
+      font-size: 10.5px; color: var(--muted); line-height: 1.4;
+    }
+    .cm-summary-note .badge { font-size: 10px; padding: 2px 6px; }
+
+    .form-streak { display: flex; gap: 4px; flex-wrap: nowrap; margin-top: 4px; }
+    .form-box {
+      width: 18px; height: 18px; display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-stat); font-size: 10px; font-weight: 700;
+      border-radius: 2px;
+    }
+    .form-box.w { background: var(--green-bg); color: var(--green-dark); }
+    .form-box.l { background: var(--red-bg); color: var(--red-dark); }
+    .form-box.latest { box-shadow: 0 0 0 2px var(--text); }
+
+    /* legacy stat utilities still referenced elsewhere on page */
+    .stat-label {
+      font-family: var(--font-mono);
+      font-size: 11px; letter-spacing: 2.5px; color: var(--muted);
+      margin-bottom: 14px;
+      display: flex; align-items: center; gap: 8px;
+      text-transform: uppercase; font-weight: 500;
+    }
+    .stat-value {
+      font-family: var(--font-stat);
+      font-size: 72px; font-weight: 700; line-height: 1;
+      margin-bottom: 8px;
+      letter-spacing: -2.5px;
+    }
+    .stat-value.stat-positive { color: var(--green); }
+    .stat-value.stat-muted    { color: var(--muted-light); }
+    .stat-context { font-family: var(--font-mono); font-size: 13px; color: var(--muted); }
+
+    /* ── TOOLTIPS ── */
+    .info-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 16px; height: 16px; border: 1px solid var(--border); border-radius: 50%;
+      font-size: 10px; color: var(--muted); cursor: help; position: relative; flex-shrink: 0;
+    }
+    .info-icon:hover .tooltip { display: block; }
+    .tooltip {
+      display: none; position: absolute; bottom: calc(100% + 10px); left: 50%;
+      transform: translateX(-50%); width: 280px; background: var(--surface-dark);
+      color: var(--text-inverse); font-size: 11px; line-height: 1.65; letter-spacing: 0;
+      padding: 12px 14px; z-index: 50; font-weight: 400; border-radius: var(--radius);
+      font-family: var(--font-mono);
+    }
+    .tooltip::after {
+      content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+      border: 6px solid transparent; border-top-color: var(--surface-dark);
+    }
+    .tooltip strong { display: block; font-size: 9px; letter-spacing: 2px; margin-bottom: 6px; color: #aaa; }
+
+    /* ── SECTION HEADER ── */
+    .section-divider { margin: 36px 0 20px; }
+    .section-divider .eyebrow { margin-bottom: 6px; }
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 26px; font-weight: 700; letter-spacing: -0.5px;
+      margin-bottom: 4px;
+    }
+    .section-subtitle { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+
+    /* ── MODE BREAKDOWN ── */
+    .mode-panel { padding: 26px 28px; margin-bottom: 16px; }
+    .panel-title { font-family: var(--font-display); font-size: 17px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 4px; }
+    .panel-subtitle { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-bottom: 20px; }
+    .mode-scale {
+      display: grid; grid-template-columns: 110px 1fr 60px 70px;
+      gap: 18px; margin-bottom: 6px;
+    }
+    .mode-scale-axis { position: relative; height: 12px; }
+    .mode-scale-axis span {
+      position: absolute; top: 0; transform: translateX(-50%);
+      font-size: 9px; letter-spacing: 1px; color: var(--muted);
+      font-family: var(--font-mono);
+    }
+    .mode-rows { display: flex; flex-direction: column; gap: 14px; }
+    .mode-row {
+      display: grid; grid-template-columns: 110px 1fr 60px 70px;
+      gap: 18px; align-items: center;
+    }
+    .mode-name {
+      font-family: var(--font-display); font-size: 14px;
+      font-weight: 600; letter-spacing: -0.1px;
+    }
+    .mode-bar-wrap {
+      position: relative; height: 10px; background: var(--surface);
+      border-radius: 5px; overflow: hidden;
+    }
+    .mode-bar { height: 100%; border-radius: 5px; position: relative; z-index: 1; transition: width 1s ease-out; }
+    /* mode-bar palette — bars match the WR text color exactly so each row
+       reads as one unified semantic color. Pivot is at 50%.
+         bar-great   (>=62%):  deep green
+         bar-high    (>50, <62): medium green
+         bar-neutral (=50.0):  gray (true break-even only)
+         bar-mid     (<50, >=40): medium red
+         bar-low     (<40):    deep red */
+    .mode-bar.bar-great   { background: var(--green); }
+    .mode-bar.bar-high    { background: #16a34a; }
+    .mode-bar.bar-neutral { background: var(--muted); }
+    .mode-bar.bar-mid     { background: var(--red-mid); }
+    .mode-bar.bar-low     { background: var(--red); }
+    .mode-tick {
+      position: absolute; top: 0; bottom: 0; width: 1px;
+      background: rgba(26,26,26,0.2); z-index: 3;
+    }
+    .mode-tick.t-25 { left: 25%; }
+    .mode-tick.t-50 { left: 50%; }
+    .mode-tick.t-75 { left: 75%; }
+    /* WR percentage — color-matched to bar fill. inline-block + justify-self:end
+       shrink-fits the colored element to just the digits and %, so any visible
+       color coverage stops exactly at the number's bounding box (no leading
+       column space gets tinted). */
+    .mode-wr {
+      display: inline-block;
+      justify-self: end;
+      font-family: var(--font-stat);
+      font-size: 16px; font-weight: 700;
+      line-height: 1;
+    }
+    /* WR text — colored highlight pivots HARD at 50%. Anything above 50%
+       reads green; anything below reads red. Only an exact 50.0 stays
+       gray. The bar (slate gradient) shows magnitude; the WR text shows
+       which side of break-even the cell is on, with strong contrast even
+       at narrow margins (48 vs 52 should look obviously different).
+         wr-great (>=62%):  deep green
+         wr-high  (>50%, <62%): medium green
+         wr-neutral (=50.0%): gray
+         wr-mid   (<50%, >=40%): medium red
+         wr-low   (<40%):   deep red */
+    .mode-wr.wr-great   { color: var(--green); }
+    .mode-wr.wr-high    { color: #16a34a; }
+    .mode-wr.wr-neutral { color: var(--muted); }
+    .mode-wr.wr-mid     { color: var(--red-mid); }
+    .mode-wr.wr-low     { color: var(--red); }
+    .mode-games { font-family: var(--font-mono); font-size: 11px; color: var(--muted); text-align: right; }
+
+    /* section break between staples and featured/rotating modes */
+    .mode-section-divider {
+      font-family: var(--font-mono);
+      font-size: 9px; letter-spacing: 2.5px;
+      color: var(--muted); font-weight: 600;
+      margin-top: 6px; padding-top: 14px;
+      border-top: 1px dashed var(--border);
+      text-transform: uppercase;
+    }
+    .mode-row.mode-rotating .mode-name { color: var(--muted); font-style: italic; }
+
+    /* ── TWO-COL (DUO + HEATMAP) ── */
+    .two-col {
+      display: grid; grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 16px; margin-bottom: 16px; align-items: stretch;
+    }
+    .vis-panel { padding: 24px 26px; display: flex; flex-direction: column; }
+    .panel-body { display: flex; flex-direction: column; flex: 1; justify-content: center; }
+
+    /* ── MATRIX ── */
+    .matrix-grid {
+      display: grid; gap: 3px; width: 100%;
+      grid-template-columns: 48px repeat(7, minmax(0, 1fr));
+      grid-template-rows: 36px repeat(7, 1fr);
+      min-height: 280px;
+    }
+    .matrix-label {
+      font-family: var(--font-mono);
+      font-size: 10px; letter-spacing: 1px; color: var(--muted);
+      display: flex; align-items: center; overflow: hidden; white-space: nowrap;
+      text-overflow: ellipsis; padding-right: 4px;
+    }
+    .matrix-label-top {
+      font-family: var(--font-mono);
+      font-size: 10px; letter-spacing: 1px; color: var(--muted); text-align: center;
+      writing-mode: vertical-rl; transform: rotate(180deg);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .matrix-cell {
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-stat); font-size: 12px; font-weight: 700;
+      position: relative; cursor: default; border-radius: 3px; min-height: 24px;
+    }
+    .matrix-cell:hover { outline: 2px solid var(--text); outline-offset: -1px; z-index: 5; }
+    .matrix-cell:hover::after {
+      content: attr(data-tooltip); position: absolute; bottom: calc(100% + 8px);
+      left: 50%; transform: translateX(-50%); background: var(--surface-dark);
+      color: var(--text-inverse); font-size: 10px; padding: 6px 10px; white-space: nowrap;
+      z-index: 20; font-weight: 400; letter-spacing: 0; border-radius: 4px;
+      font-family: var(--font-mono);
+    }
+    .matrix-self { background: var(--surface); color: var(--muted); font-size: 11px; }
+    .matrix-empty { background: var(--surface); color: transparent; }
+    .wr-low   { background: var(--red-bg);   color: var(--red-dark); }
+    .wr-mid   { background: var(--amber-bg); color: var(--amber-dark); }
+    .wr-high  { background: var(--green-bg); color: var(--green-dark); }
+    .wr-great { background: #bbf7d0;         color: var(--green-dark); font-weight: 700; }
+
+    /* ── HEATMAP ── */
+    .heatmap-grid {
+      display: grid; grid-template-columns: 28px repeat(24, minmax(0,1fr));
+      grid-auto-rows: 1fr; gap: 2px; width: 100%; margin-bottom: 4px;
+      flex: 1; min-height: 220px;
+    }
+    .heatmap-day-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 1px; color: var(--muted); display: flex; align-items: center; }
+    .heatmap-cell { position: relative; cursor: default; border-radius: 2px; min-height: 20px; }
+    .heatmap-cell:hover { outline: 1px solid var(--text); z-index: 5; }
+    .heatmap-cell:hover::after {
+      content: attr(data-tooltip); position: absolute; bottom: calc(100% + 6px);
+      left: 50%; transform: translateX(-50%); background: var(--surface-dark);
+      color: var(--text-inverse); font-size: 10px; padding: 4px 8px; white-space: nowrap;
+      z-index: 20; border-radius: 4px; font-family: var(--font-mono);
+    }
+    .heatmap-hour-labels {
+      display: grid; grid-template-columns: 28px repeat(24, minmax(0,1fr)); gap: 2px;
+    }
+    .heatmap-hour-label { font-family: var(--font-mono); font-size: 9px; color: var(--muted); text-align: center; }
+    .h-0 { background: var(--surface); }
+    .h-1 { background: var(--slate-1); }
+    .h-2 { background: var(--slate-2); }
+    .h-3 { background: var(--slate-3); }
+    .h-4 { background: var(--slate-4); }
+    .h-5 { background: var(--slate-5); }
+
+    /* ══════════════════════════════════════════════════════
+       ANALYST ROW — Tilt Index (wider) + Link Analysis (vertical/narrow)
+       ══════════════════════════════════════════════════════ */
+    .analyst-row {
+      display: grid;
+      grid-template-columns: 1.45fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+      align-items: stretch;
+    }
+
+    /* ── FUN CARD base ── */
+    .fun-card { padding: 28px 30px; position: relative; overflow: hidden; display: flex; flex-direction: column; }
+    .fun-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 2.5px; color: var(--muted); margin-bottom: 8px; margin-top: 0; text-transform: uppercase; font-weight: 600; }
+    .fun-title { font-family: var(--font-display); font-size: 24px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 5px; }
+    .fun-subtitle { font-family: var(--font-mono); font-size: 11px; color: var(--muted); letter-spacing: 0.5px; margin-bottom: 20px; }
+    .fun-body { flex: 1; }
+
+    /* ── TILT INDEX ── */
+    .tilt-measuring {
+      padding: 12px 14px; background: var(--surface);
+      border-left: 3px solid var(--amber);
+      margin-bottom: 22px;
+    }
+    .tilt-measuring-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 2px; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
+    .tilt-measuring-text { font-size: 11.5px; line-height: 1.6; color: var(--muted); }
+    .tilt-class-head {
+      display: grid; grid-template-columns: 1fr auto; align-items: baseline;
+      gap: 12px; padding-bottom: 14px; border-bottom: 1px dashed var(--border);
+      margin-bottom: 16px;
+    }
+    .tilt-class-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 2.5px; color: var(--muted); grid-column: 1 / -1; font-weight: 600; }
+    .tilt-class-value {
+      font-family: var(--font-display); font-size: 32px; font-weight: 700;
+      letter-spacing: 1px; color: var(--amber);
+    }
+    .tilt-class-score {
+      font-family: var(--font-stat); font-size: 22px; font-weight: 700;
+      color: var(--muted); letter-spacing: 0;
+    }
+    .tilt-segments {
+      display: grid; grid-template-columns: repeat(10, 1fr);
+      gap: 3px; margin-bottom: 22px;
+    }
+    .tilt-seg {
+      height: 20px; background: var(--surface);
+      border: 1px solid var(--border-light);
+    }
+    .tilt-seg.on-amber { background: var(--amber-mid); border-color: var(--amber); }
+    .tilt-seg.on-red   { background: var(--red-mid);   border-color: var(--red); }
+
+    .judgments-head {
+      font-family: var(--font-mono); font-size: 10px; letter-spacing: 2.5px; color: var(--muted);
+      margin-bottom: 10px; padding-bottom: 8px; font-weight: 600;
+      border-bottom: 1px dashed var(--border);
+    }
+    .judgment {
+      padding: 10px 0 10px 16px; font-size: 13px; line-height: 1.65;
+      color: var(--text); position: relative;
+      border-bottom: 1px dashed var(--border-light);
+    }
+    .judgment:last-child { border-bottom: none; }
+    .judgment::before {
+      content: '▸'; position: absolute; left: 0; top: 10px;
+      color: var(--amber); font-size: 11px;
+    }
+    .judgment strong {
+      font-family: var(--font-display); font-weight: 700;
+      letter-spacing: 0; color: var(--text);
+    }
+    .confidence-stamp {
+      display: inline-block; margin-top: 14px;
+      font-family: var(--font-mono);
+      font-size: 10px; letter-spacing: 2px; padding: 4px 10px;
+      border: 1px solid var(--amber); color: var(--amber); font-weight: 600;
+    }
+
+    /* ── LINK ANALYSIS (vertical) ── */
+    .link-panel { padding: 22px 24px; display: flex; flex-direction: column; }
+    .link-svg-wrap {
+      margin-top: 14px; flex: 1;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .link-svg { width: 100%; height: auto; display: block; max-width: 360px; }
+    .link-legend {
+      display: grid; grid-template-columns: 1fr;
+      gap: 8px;
+      padding-top: 14px; margin-top: 14px;
+      border-top: 1px dashed var(--border-light);
+      font-family: var(--font-mono);
+      font-size: 10px; letter-spacing: 1.5px; color: var(--muted);
+    }
+    .legend-row { display: flex; align-items: center; gap: 9px; }
+    .legend-line { width: 22px; height: 3px; }
+    .legend-node { width: 10px; height: 10px; border-radius: 50%; background: var(--text); flex-shrink: 0; }
+    .legend-node.node-isolated { background: var(--text); border: 2px dashed var(--border); }
+
+    /* ── CHAMPION POOLS (FULL WIDTH, grid) ── */
+    .pools-card { margin-bottom: 16px; }
+    .pools-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 0;
+    }
+    .pool-row {
+      padding: 18px 24px;
+      border-bottom: 1px dashed var(--border-light);
+      border-right: 1px dashed var(--border-light);
+    }
+    .pool-row:nth-child(even) { border-right: none; }
+    .pool-row:nth-last-child(-n+2) { border-bottom: none; }
+    .pool-row:nth-last-child(-n+2):nth-child(odd) { border-bottom: 1px dashed var(--border-light); }
+    @media (min-width: 720px) {
+      .pool-row:nth-last-child(-n+2):nth-child(odd) { border-bottom: none; }
+    }
+    .pool-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 9px; gap: 10px;
+    }
+    .pool-name {
+      font-family: var(--font-display); font-size: 15px;
+      font-weight: 700; letter-spacing: 0;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .pool-class {
+      font-family: var(--font-mono);
+      font-size: 10px; letter-spacing: 1.5px; font-weight: 600;
+      padding: 3px 8px; border-radius: 3px;
+    }
+    .pool-bar {
+      display: flex; height: 26px; border-radius: 3px; overflow: hidden;
+    }
+    .pool-seg {
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+      white-space: nowrap; overflow: hidden; min-width: 0;
+      padding: 0 5px;
+    }
+    .pool-seg.hide-text { color: transparent !important; }
+    .pool-note {
+      font-size: 12px; line-height: 1.65; color: var(--text);
+      margin-top: 10px; padding: 4px 0 0 14px;
+      border-left: 2px solid var(--border);
+    }
+    .pool-note strong {
+      font-family: var(--font-display);
+      font-weight: 700;
+      display: block; margin-bottom: 4px;
+      font-size: 13px;
+    }
+
+    /* monochrome pool segments — depth via shade, not hue */
+    .pool-seg.s-1 { background: #1a1a1a; color: #f7f3e9; }
+    .pool-seg.s-2 { background: #4a4439; color: #f7f3e9; }
+    .pool-seg.s-3 { background: #756e60; color: #f7f3e9; }
+    .pool-seg.s-4 { background: #a8a194; color: #1a1a1a; }
+    .pool-seg.s-5 { background: #c8c3b8; color: #4a4439; }
+    .pool-seg.s-empty { background: var(--surface); color: var(--muted); font-style: italic; }
+
+    /* ── FIELD ASSESSMENTS ── */
+    .analyst-bottom { margin-bottom: 28px; }
+    .assessment-list {
+      display: grid; grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 0;
+    }
+    .assessment-item {
+      padding: 20px 22px 20px 26px;
+      border-bottom: 1px solid var(--border-light);
+      border-right: 1px solid var(--border-light);
+      position: relative;
+    }
+    .assessment-item:nth-child(even) { border-right: none; }
+    .assessment-item:nth-last-child(-n+2) { border-bottom: none; padding-bottom: 4px; }
+    .assessment-item:nth-child(1),
+    .assessment-item:nth-child(2) { padding-top: 4px; }
+    .assessment-item::before {
+      content: ''; position: absolute;
+      left: 10px; top: 20px; bottom: 20px; width: 3px;
+      background: var(--border);
+    }
+    .assessment-item:nth-child(1)::before,
+    .assessment-item:nth-child(2)::before { top: 4px; }
+    .assessment-item:nth-last-child(-n+2)::before { bottom: 4px; }
+    .assessment-item.severity-green::before { background: var(--green); }
+    .assessment-item.severity-red::before   { background: var(--red); }
+    .assessment-item.severity-amber::before { background: var(--amber); }
+    .assessment-item.severity-blue::before  { background: var(--blue); }
+    .assessment-item.severity-black::before { background: var(--text); }
+
+    /* heavy-redaction observation — fragments of text only */
+    .assessment-redacted .assessment-note {
+      display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline;
+      line-height: 1.9;
+    }
+    .assessment-redacted .assessment-note .vis {
+      color: var(--text); font-weight: 600;
+    }
+    .assessment-redacted .assessment-note .blk {
+      display: inline-block; height: 12px;
+      background: var(--ink); border-radius: 1px;
+      vertical-align: middle; position: relative; top: 1px;
+    }
+
+    .assessment-head {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 10px; gap: 10px;
+    }
+    .assessment-code {
+      font-family: var(--font-mono);
+      font-size: 10px; letter-spacing: 2px; color: var(--muted);
+      font-weight: 600;
+    }
+    .assessment-subject {
+      font-family: var(--font-display); font-size: 16px;
+      font-weight: 700; margin-bottom: 7px; letter-spacing: -0.2px;
+    }
+    .assessment-note { font-size: 12.5px; line-height: 1.7; color: var(--text); opacity: 0.92; margin-bottom: 0; }
+    .assessment-tag {
+      font-family: var(--font-mono);
+      font-size: 10px; letter-spacing: 1.5px;
+      padding: 3px 8px; border-radius: 3px; font-weight: 600;
+    }
+
+    /* ── COLLAPSIBLE ── */
+    details.collapsible { margin-bottom: 16px; }
+    details.collapsible summary {
+      list-style: none; cursor: pointer;
+      padding: 20px 24px; background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); box-shadow: var(--shadow);
+      display: flex; justify-content: space-between; align-items: center;
+      transition: box-shadow 0.2s;
+    }
+    details.collapsible summary:hover { box-shadow: var(--shadow-hover); }
+    details.collapsible summary::-webkit-details-marker { display: none; }
+    .summary-left { display: flex; flex-direction: column; gap: 3px; }
+    .summary-title { font-family: var(--font-display); font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+    .summary-subtitle { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+    .summary-right { display: flex; align-items: center; gap: 14px; }
+    .summary-count { font-family: var(--font-mono); font-size: 11px; color: var(--muted); letter-spacing: 1px; }
+    .chevron { font-size: 11px; color: var(--muted); transition: transform 0.2s; }
+    details[open] .chevron { transform: rotate(180deg); }
+    .collapsible-content {
+      margin-top: 10px; background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
+    }
+
+    /* ── OP TABLE ── */
+    .op-table { width: 100%; border-collapse: collapse; }
+    .op-table th {
+      font-family: var(--font-mono);
+      font-size: 10px; letter-spacing: 2px; color: var(--muted); text-align: left;
+      padding: 14px 18px; background: var(--surface); border-bottom: 1px solid var(--border); font-weight: 500;
+    }
+    .op-table td { font-family: var(--font-mono); font-size: 13px; padding: 14px 18px; border-bottom: 1px solid var(--border-light); }
+    .op-table tr:last-child td { border-bottom: none; }
+    .op-table tr:hover td { background: #faf7ed; }
+    .op-result { font-family: var(--font-stat); font-weight: 700; font-size: 12px; letter-spacing: 1px; padding: 4px 9px; border-radius: 3px; }
+    .victory { background: var(--green-bg); color: var(--green-dark); }
+    .defeat  { background: var(--red-bg); color: var(--red-dark); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      .cm-summary { grid-template-columns: repeat(2, 1fr); }
+      .cm-summary-cell:nth-child(2) { border-right: none; }
+      .cm-summary-cell:nth-child(-n+2) { border-bottom: 1px solid var(--border-light); }
+      .two-col, .pools-grid { grid-template-columns: 1fr; }
+      .analyst-row { grid-template-columns: 1fr; }
+      .stat-value { font-size: 56px; }
+      .dashboard { padding: 24px 20px 60px; }
+    }
+  </style>
+</head>
+<body class="bg-grid-page">
+
+  <header class="site-header">
+    <div class="header-left">
+      <a href="landing.html" class="logo">LEGION</a>
+      <div class="cell-switcher" id="cellSwitcher">
+        <button class="cell-switcher-trigger" type="button" aria-haspopup="true" aria-expanded="false">
+          <span>Zoo 2</span>
+          <span class="chev">&#9662;</span>
+        </button>
+        <div class="cell-switcher-dropdown" role="menu">
+          <div class="cs-section-label">Active Case File</div>
+          <a class="cs-cell-row active" href="briefing.html">
+            <div class="cs-cell-name">Zoo 2 <span class="cs-cell-check">&#10003;</span></div>
+            <div class="cs-cell-meta">LGN-<span class="redacted-inline" style="height:8px; width:32px;"></span> &nbsp;&middot;&nbsp; 7 OPERATORS</div>
+          </a>
+          <div class="cs-section-label">Other Files</div>
+          <a class="cs-cell-row" href="#">
+            <div class="cs-cell-name">Shadow Company</div>
+            <div class="cs-cell-meta">LGN-<span class="redacted-inline" style="height:8px; width:32px;"></span> &nbsp;&middot;&nbsp; 5 OPERATORS</div>
+          </a>
+          <a class="cs-cell-row" href="#">
+            <div class="cs-cell-name">Iron Lattice</div>
+            <div class="cs-cell-meta">LGN-<span class="redacted-inline" style="height:8px; width:32px;"></span> &nbsp;&middot;&nbsp; 3 OPERATORS</div>
+          </a>
+          <div class="cs-divider"></div>
+          <a class="cs-action-row" href="intake.html">
+            <span class="cs-plus">+</span><span>Open New File</span>
+          </a>
+          <a class="cs-action-row" href="#">
+            <span class="cs-plus">&#9776;</span><span>Manage All Files</span>
+          </a>
+        </div>
+      </div>
+      <nav>
+        <a href="briefing.html" class="active">Briefing</a>
+        <a href="match-history.html">Operation Log</a>
+        <a href="about.html">About</a>
+      </nav>
+    </div>
+    <div class="header-right">
+      <div class="live-ticker">LIVE · SYNC <span id="syncTimer">00:00:03</span></div>
+      <div class="user-badge"><strong>jimmmaaayyy</strong> #NA1</div>
+      <button class="logout-btn">Disengage</button>
+    </div>
+  </header>
+
+  <!-- ══ PAGE HEADER (full-width sticky bar, sibling of .dashboard) ══ -->
+  <div class="page-header-bar">
+    <div class="page-header">
+      <div>
+        <div class="eyebrow eyebrow-green">&bull; CELL BRIEFING &mdash; ACTIVE</div>
+        <h1 class="title-hero page-title">Zoo 2</h1>
+        <div class="page-meta">
+          <strong>7</strong> operators <span class="meta-divider">//</span>
+          region <strong>NA</strong> <span class="meta-divider">//</span>
+          established <strong>Mar 12, 2026</strong> <span class="meta-divider">//</span>
+          case <strong>LGN-<span class="redacted-inline" style="height:11px; width:36px;"></span></strong> <span class="meta-divider">//</span>
+          <span class="sync-meta">last intel pulled <span id="pulledAgo">3</span>s ago</span>
+          <button class="recruit-btn">+ Flag Operator</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dashboard">
+
+    <!-- ══ CELL MEMBERS ══ -->
+    <div class="card cell-members">
+      <div class="cm-summary">
+        <div class="cm-summary-cell">
+          <div class="cm-summary-label">Joint WR</div>
+          <div class="cm-summary-value positive" data-countup="58.3" data-suffix="%">58.3%</div>
+          <div class="cm-summary-note"><span class="badge badge-green">&uarr; 7.1 pts vs. solo</span></div>
+        </div>
+        <div class="cm-summary-cell">
+          <div class="cm-summary-label">WR Without You</div>
+          <div class="cm-summary-value muted" data-countup="51.2" data-suffix="%">51.2%</div>
+          <div class="cm-summary-note">counterfactual baseline</div>
+        </div>
+        <div class="cm-summary-cell">
+          <div class="cm-summary-label">Deployments</div>
+          <div class="cm-summary-value" data-countup="142" data-integer="true">142</div>
+          <div class="cm-summary-note">last 30 days</div>
+        </div>
+        <div class="cm-summary-cell">
+          <div class="cm-summary-label">Recent Form</div>
+          <div class="form-streak">
+            <div class="form-box w">W</div>
+            <div class="form-box l">L</div>
+            <div class="form-box w">W</div>
+            <div class="form-box w">W</div>
+            <div class="form-box l">L</div>
+            <div class="form-box w">W</div>
+            <div class="form-box w">W</div>
+            <div class="form-box l">L</div>
+            <div class="form-box w">W</div>
+            <div class="form-box w latest">W</div>
+          </div>
+          <div class="cm-summary-note">last 10 deployments</div>
+        </div>
+      </div>
+      <table class="cm-table">
+        <thead>
+          <tr>
+            <th>OPERATOR</th>
+            <th>STATUS</th>
+            <th>GAMES (30D)</th>
+            <th>WIN RATE</th>
+            <th>CELL WR WITHOUT &mdash;</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><div class="cm-name">iHazACatz #NA1</div></td>
+            <td><span class="cm-status"><span class="status-dot status-active"></span>Active</span></td>
+            <td class="cm-num">92</td>
+            <td class="cm-num cm-num-pos">61.2%</td>
+            <td><span class="redacted redacted-w-short"></span></td>
+          </tr>
+          <tr class="cm-you">
+            <td><div class="cm-name">jimmmaaayyy #NA1 <span class="cm-you-tag">YOU</span></div></td>
+            <td><span class="cm-status"><span class="status-dot status-active"></span>Active</span></td>
+            <td class="cm-num">87</td>
+            <td class="cm-num">56.3%</td>
+            <td class="cm-num">51.2%</td>
+          </tr>
+          <tr>
+            <td><div class="cm-name">lyu #EUW</div></td>
+            <td><span class="cm-status"><span class="status-dot status-active"></span>Active</span></td>
+            <td class="cm-num">71</td>
+            <td class="cm-num">54.9%</td>
+            <td><span class="redacted redacted-w-short"></span></td>
+          </tr>
+          <tr>
+            <td><div class="cm-name">Pin Pon #NA1</div></td>
+            <td><span class="cm-status"><span class="status-dot status-active"></span>Active</span></td>
+            <td class="cm-num">54</td>
+            <td class="cm-num cm-num-neg">41.7%</td>
+            <td><span class="redacted redacted-w-short"></span></td>
+          </tr>
+          <tr>
+            <td><div class="cm-name">sdsOmega #NA1</div></td>
+            <td><span class="cm-status"><span class="status-dot status-active"></span>Active</span></td>
+            <td class="cm-num">63</td>
+            <td class="cm-num">52.4%</td>
+            <td><span class="redacted redacted-w-short"></span></td>
+          </tr>
+          <tr>
+            <td><div class="cm-name">The Afk King #NA1</div></td>
+            <td><span class="cm-status"><span class="status-dot status-inactive"></span>Inactive</span></td>
+            <td class="cm-num">14</td>
+            <td class="cm-num">48.1%</td>
+            <td><span class="redacted redacted-w-short"></span></td>
+          </tr>
+          <tr>
+            <td><div class="cm-name">UnfoldedTaco #NA1</div></td>
+            <td><span class="cm-status"><span class="status-dot status-inactive"></span>Inactive</span></td>
+            <td class="cm-num">8</td>
+            <td class="cm-num">47.2%</td>
+            <td><span class="redacted redacted-w-short"></span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ══ GAME MODE BREAKDOWN ══ -->
+    <div class="card mode-panel">
+      <div class="panel-title">Game Mode Breakdown</div>
+      <div class="panel-subtitle">Win rate and activity by mode (last 30 days)</div>
+      <div class="mode-scale">
+        <div></div>
+        <div class="mode-scale-axis">
+          <span style="left:25%;">25%</span>
+          <span style="left:50%;">50%</span>
+          <span style="left:75%;">75%</span>
+        </div>
+        <div></div>
+        <div></div>
+      </div>
+      <div class="mode-rows">
+        <!-- ── Staple modes ── -->
+        <div class="mode-row">
+          <div class="mode-name">Ranked</div>
+          <div class="mode-bar-wrap">
+            <div class="mode-bar bar-high" style="width:52.4%;"></div>
+            <div class="mode-tick t-25"></div><div class="mode-tick t-50"></div><div class="mode-tick t-75"></div>
+          </div>
+          <div class="mode-wr wr-high">52.4%</div>
+          <div class="mode-games">38 games</div>
+        </div>
+        <div class="mode-row">
+          <div class="mode-name">Ranked Flex</div>
+          <div class="mode-bar-wrap">
+            <div class="mode-bar bar-high" style="width:58.3%;"></div>
+            <div class="mode-tick t-25"></div><div class="mode-tick t-50"></div><div class="mode-tick t-75"></div>
+          </div>
+          <div class="mode-wr wr-high">58.3%</div>
+          <div class="mode-games">142 games</div>
+        </div>
+        <div class="mode-row">
+          <div class="mode-name">Normal</div>
+          <div class="mode-bar-wrap">
+            <div class="mode-bar bar-mid" style="width:48.9%;"></div>
+            <div class="mode-tick t-25"></div><div class="mode-tick t-50"></div><div class="mode-tick t-75"></div>
+          </div>
+          <div class="mode-wr wr-mid">48.9%</div>
+          <div class="mode-games">18 games</div>
+        </div>
+        <div class="mode-row">
+          <div class="mode-name">ARAM</div>
+          <div class="mode-bar-wrap">
+            <div class="mode-bar bar-great" style="width:67.8%;"></div>
+            <div class="mode-tick t-25"></div><div class="mode-tick t-50"></div><div class="mode-tick t-75"></div>
+          </div>
+          <div class="mode-wr wr-great">67.8%</div>
+          <div class="mode-games">67 games</div>
+        </div>
+        <div class="mode-row">
+          <div class="mode-name">ARAM Mayhem</div>
+          <div class="mode-bar-wrap">
+            <div class="mode-bar bar-great" style="width:71.4%;"></div>
+            <div class="mode-tick t-25"></div><div class="mode-tick t-50"></div><div class="mode-tick t-75"></div>
+          </div>
+          <div class="mode-wr wr-great">71.4%</div>
+          <div class="mode-games">14 games</div>
+        </div>
+        <div class="mode-row">
+          <div class="mode-name">Arena</div>
+          <div class="mode-bar-wrap">
+            <div class="mode-bar bar-high" style="width:52.1%;"></div>
+            <div class="mode-tick t-25"></div><div class="mode-tick t-50"></div><div class="mode-tick t-75"></div>
+          </div>
+          <div class="mode-wr wr-high">52.1%</div>
+          <div class="mode-games">23 games</div>
+        </div>
+
+        <!-- ── Featured / Rotating modes ── -->
+        <div class="mode-section-divider">Featured / Rotating</div>
+
+        <div class="mode-row mode-rotating">
+          <div class="mode-name">ARURF</div>
+          <div class="mode-bar-wrap">
+            <div class="mode-bar bar-low" style="width:38.5%;"></div>
+            <div class="mode-tick t-25"></div><div class="mode-tick t-50"></div><div class="mode-tick t-75"></div>
+          </div>
+          <div class="mode-wr wr-low">38.5%</div>
+          <div class="mode-games">13 games</div>
+        </div>
+        <div class="mode-row mode-rotating">
+          <div class="mode-name">Nexus Blitz</div>
+          <div class="mode-bar-wrap">
+            <div class="mode-bar bar-great" style="width:62.5%;"></div>
+            <div class="mode-tick t-25"></div><div class="mode-tick t-50"></div><div class="mode-tick t-75"></div>
+          </div>
+          <div class="mode-wr wr-great">62.5%</div>
+          <div class="mode-games">8 games</div>
+        </div>
+        <div class="mode-row mode-rotating">
+          <div class="mode-name">One for All</div>
+          <div class="mode-bar-wrap">
+            <div class="mode-bar bar-high" style="width:60.0%;"></div>
+            <div class="mode-tick t-25"></div><div class="mode-tick t-50"></div><div class="mode-tick t-75"></div>
+          </div>
+          <div class="mode-wr wr-high">60.0%</div>
+          <div class="mode-games">5 games</div>
+        </div>
+        <div class="mode-row mode-rotating">
+          <div class="mode-name">Ultimate Spellbook</div>
+          <div class="mode-bar-wrap">
+            <div class="mode-bar bar-neutral" style="width:50.0%;"></div>
+            <div class="mode-tick t-25"></div><div class="mode-tick t-50"></div><div class="mode-tick t-75"></div>
+          </div>
+          <div class="mode-wr wr-neutral">50.0%</div>
+          <div class="mode-games">4 games</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ DUO MATRIX + HEATMAP ══ -->
+    <div class="two-col">
+      <div class="card vis-panel">
+        <div class="panel-title">Duo Win Rates</div>
+        <div class="panel-subtitle">Win rate when any two operators deploy together</div>
+        <div class="panel-body">
+          <div class="matrix-grid" id="synergyMatrix"></div>
+        </div>
+      </div>
+      <div class="card vis-panel">
+        <div class="panel-title">Activity Heatmap</div>
+        <div class="panel-subtitle">When the cell deploys together (last 30 days)</div>
+        <div class="panel-body">
+          <div class="heatmap-grid" id="heatmap"></div>
+          <div class="heatmap-hour-labels" id="hourLabels"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ CHAMPION POOLS (FULL WIDTH) ══ -->
+    <div class="card fun-card pools-card">
+      <div class="fun-label">&bull; Operator Profiles</div>
+      <div class="fun-title">Champion Pools</div>
+      <div class="fun-subtitle">Champion selection patterns, by subject</div>
+      <div class="fun-body">
+        <div class="pools-grid">
+
+          <div class="pool-row">
+            <div class="pool-header">
+              <span class="pool-name">iHazACatz</span>
+              <span class="pool-class badge badge-amber">NARROW</span>
+            </div>
+            <div class="pool-bar">
+              <div class="pool-seg s-1" style="width:45%;">THRESH 45%</div>
+              <div class="pool-seg s-2" style="width:22%;">LEONA</div>
+              <div class="pool-seg s-3" style="width:18%;">NAUT</div>
+              <div class="pool-seg s-4 hide-text" style="width:10%;">ALIS</div>
+              <div class="pool-seg s-5 hide-text" style="width:5%;">RELL</div>
+            </div>
+            <div class="pool-note">
+              <strong>Five supports on file. All engagement profiles.</strong>
+              No enchanter picks recorded. Role: support, fixed. No deviation observed under cell-internal pressure.
+            </div>
+          </div>
+
+          <div class="pool-row">
+            <div class="pool-header">
+              <span class="pool-name">jimmmaaayyy <span class="cm-you-tag">YOU</span></span>
+              <span class="pool-class badge badge-amber">SPECIALIST</span>
+            </div>
+            <div class="pool-bar">
+              <div class="pool-seg s-1" style="width:72%;">JINX 72%</div>
+              <div class="pool-seg s-2" style="width:11%;">CAIT</div>
+              <div class="pool-seg s-3 hide-text" style="width:8%;">EZ</div>
+              <div class="pool-seg s-4 hide-text" style="width:5%;">XAY</div>
+              <div class="pool-seg s-5 hide-text" style="width:4%;">KAI</div>
+            </div>
+            <div class="pool-note">
+              <strong>Five ADCs on file. Jinx in 72% of deployments.</strong>
+              Secondary picks selected only when Jinx is banned. Role: ADC, fixed. No deviation observed.
+            </div>
+          </div>
+
+          <div class="pool-row">
+            <div class="pool-header">
+              <span class="pool-name">lyu</span>
+              <span class="pool-class badge badge-amber">ROLE-LOCKED</span>
+            </div>
+            <div class="pool-bar">
+              <div class="pool-seg s-1" style="width:38%;">LUX 38%</div>
+              <div class="pool-seg s-2" style="width:19%;">SYNDRA</div>
+              <div class="pool-seg s-3" style="width:14%;">ANNIE</div>
+              <div class="pool-seg s-4 hide-text" style="width:12%;">ORI</div>
+              <div class="pool-seg s-5" style="width:17%;">+8 more</div>
+            </div>
+            <div class="pool-note">
+              <strong>12 mages on file. Mid lane in 100% of matches.</strong>
+              No off-lane deployments observed. Team composition adjusts to accommodate.
+            </div>
+          </div>
+
+          <div class="pool-row">
+            <div class="pool-header">
+              <span class="pool-name">Pin Pon</span>
+              <span class="pool-class badge badge-red">ONE-TRICK</span>
+            </div>
+            <div class="pool-bar">
+              <div class="pool-seg s-1" style="width:84%;">MASTER YI 84%</div>
+              <div class="pool-seg s-3 hide-text" style="width:9%;">TRYN</div>
+              <div class="pool-seg s-4 hide-text" style="width:7%;">OLAF</div>
+            </div>
+            <div class="pool-note">
+              <strong>Three champions on file. Functionally one.</strong>
+              Master Yi in 84% of recorded matches. Reversion observed within two matches of any deviation. Specialist profile assessed with HIGH CONFIDENCE.
+            </div>
+          </div>
+
+          <div class="pool-row">
+            <div class="pool-header">
+              <span class="pool-name">sdsOmega</span>
+              <span class="pool-class badge badge-blue">CHAOTIC</span>
+            </div>
+            <div class="pool-bar">
+              <div class="pool-seg s-1" style="width:15%;">AHRI</div>
+              <div class="pool-seg s-2" style="width:12%;">SYN</div>
+              <div class="pool-seg s-3 hide-text" style="width:10%;">LB</div>
+              <div class="pool-seg s-4 hide-text" style="width:9%;">VIK</div>
+              <div class="pool-seg s-5 hide-text" style="width:8%;">ZED</div>
+              <div class="pool-seg s-empty" style="width:46%;">+42 more</div>
+            </div>
+            <div class="pool-note">
+              <strong>47 champions across 63 matches. No pattern detected.</strong>
+              Selection methodology undetermined. Per-champion mastery: marginal.
+            </div>
+          </div>
+
+          <div class="pool-row">
+            <div class="pool-header">
+              <span class="pool-name">The Afk King</span>
+              <span class="pool-class badge badge-blue">INCONCLUSIVE</span>
+            </div>
+            <div class="pool-bar">
+              <div class="pool-seg s-empty" style="width:100%;">INSUFFICIENT DATA &mdash; 14 MATCHES</div>
+            </div>
+            <div class="pool-note">
+              <strong>14 matches recorded. Sample below threshold.</strong>
+              Profile pending additional deployments.
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ ANALYST NOTES SECTION ══ -->
+    <div class="section-divider">
+      <div class="eyebrow">&bull; ANALYST NOTES</div>
+      <h2 class="section-title">Behavioral Intelligence</h2>
+      <div class="section-subtitle">Performance anomalies, synergies, and deployment patterns</div>
+    </div>
+
+    <!-- TILT + LINK ANALYSIS (side by side) -->
+    <div class="analyst-row">
+
+      <!-- TILT INDEX (wider left) -->
+      <div class="card fun-card">
+        <div class="fun-label">&bull; Behavioral Assessment</div>
+        <div class="fun-title">Tilt Index</div>
+        <div class="fun-body">
+
+          <div class="tilt-measuring">
+            <div class="tilt-measuring-label">WHAT WE'RE MEASURING</div>
+            <div class="tilt-measuring-text">
+              Post-loss cohesion decay across consecutive-loss sequences. Scale 0&ndash;10. Higher = worse.
+            </div>
+          </div>
+
+          <div class="tilt-class-head">
+            <div class="tilt-class-label">THREAT LEVEL</div>
+            <div class="tilt-class-value">ELEVATED</div>
+            <div class="tilt-class-score">7.2 / 10</div>
+          </div>
+          <div class="tilt-segments">
+            <div class="tilt-seg on-amber"></div>
+            <div class="tilt-seg on-amber"></div>
+            <div class="tilt-seg on-amber"></div>
+            <div class="tilt-seg on-amber"></div>
+            <div class="tilt-seg on-amber"></div>
+            <div class="tilt-seg on-amber"></div>
+            <div class="tilt-seg on-amber"></div>
+            <div class="tilt-seg"></div>
+            <div class="tilt-seg"></div>
+            <div class="tilt-seg"></div>
+          </div>
+
+          <div class="judgments-head">KEY JUDGMENTS</div>
+          <div class="judgment"><strong>Init. Vector</strong> &mdash; Subject <em>Pin Pon</em> initiates cascade in 84% of observed incidents. Coincident with Master Yi pick in game two.</div>
+          <div class="judgment"><strong>Cascade</strong> &mdash; Cell-wide morale collapse: 47s after queue re-entry, mean.</div>
+          <div class="judgment"><strong>Output</strong> &mdash; Subsequent match WR: 41.2% (&minus;17.1 points from baseline).</div>
+          <div class="judgment"><strong>Recovery</strong> &mdash; 3.4 additional games to restore baseline. Queue-dodging does not shorten window.</div>
+          <div class="judgment"><strong>Resistance</strong> &mdash; Subject <em>iHazACatz</em> demonstrates composure under cascade. Mechanism undetermined.</div>
+
+          <div class="confidence-stamp">CONFIDENCE: HIGH &middot; N=147</div>
+        </div>
+      </div>
+
+      <!-- LINK ANALYSIS (narrower right, vertical) -->
+      <div class="card fun-card link-panel">
+        <div class="fun-label">&bull; Network Intelligence</div>
+        <div class="fun-title">Link Analysis</div>
+        <div class="link-svg-wrap">
+          <svg class="link-svg" viewBox="0 0 360 480" xmlns="http://www.w3.org/2000/svg">
+            <!--
+              Pentagonal layout — 5 active operators at vertices (alphabetical,
+              clockwise from top: CAT, JIM, LYU, PIN, SDS). Two inactive
+              orbit nodes (AFK, TAC) outside the perimeter.
+              edge color = pair WR; edge weight = joint games
+            -->
+
+            <!-- ── EDGES (pentagon all-pairs C(5,2) = 10 edges) ── -->
+            <!-- CAT ↔ JIM : 71.2% / 48 — STRONG -->
+            <line x1="180" y1="80"  x2="305" y2="170" stroke="#15803d" stroke-width="5.2" stroke-opacity="0.78"/>
+            <!-- CAT ↔ LYU : 53.3% / 15 — neutral -->
+            <line x1="180" y1="80"  x2="260" y2="370" stroke="#8a8a8a" stroke-width="2.0" stroke-opacity="0.4"/>
+            <!-- CAT ↔ PIN : 44.1% / 6 — LOW -->
+            <line x1="180" y1="80"  x2="100" y2="370" stroke="#b91c1c" stroke-width="1.4" stroke-opacity="0.55"/>
+            <!-- CAT ↔ SDS : 49.7% / 19 — neutral -->
+            <line x1="180" y1="80"  x2="55"  y2="170" stroke="#8a8a8a" stroke-width="2.2" stroke-opacity="0.38"/>
+            <!-- JIM ↔ LYU : 56.8% / 31 — neutral -->
+            <line x1="305" y1="170" x2="260" y2="370" stroke="#8a8a8a" stroke-width="3.0" stroke-opacity="0.45"/>
+            <!-- JIM ↔ PIN : 48.3% / 8 — weak -->
+            <line x1="305" y1="170" x2="100" y2="370" stroke="#8a8a8a" stroke-width="1.4" stroke-opacity="0.35"/>
+            <!-- JIM ↔ SDS : 54.1% / 22 — neutral -->
+            <line x1="305" y1="170" x2="55"  y2="170" stroke="#8a8a8a" stroke-width="2.4" stroke-opacity="0.4"/>
+            <!-- LYU ↔ PIN : 46.2% / 9 — weak -->
+            <line x1="260" y1="370" x2="100" y2="370" stroke="#8a8a8a" stroke-width="1.4" stroke-opacity="0.35"/>
+            <!-- LYU ↔ SDS : 64.7% / 18 — STRONG -->
+            <line x1="260" y1="370" x2="55"  y2="170" stroke="#15803d" stroke-width="3.2" stroke-opacity="0.7"/>
+            <!-- PIN ↔ SDS : 42.8% / 7 — LOW -->
+            <line x1="100" y1="370" x2="55"  y2="170" stroke="#b91c1c" stroke-width="1.6" stroke-opacity="0.55"/>
+
+            <!-- ── NODES (5 active, alphabetical clockwise from top) ── -->
+            <circle cx="180" cy="80"  r="10" fill="#1a1a1a"/>
+            <text x="180" y="58" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="700" fill="#1a1a1a" letter-spacing="1.5">CAT</text>
+
+            <circle cx="305" cy="170" r="10" fill="#1a1a1a"/>
+            <text x="320" y="174" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="700" fill="#1a1a1a" letter-spacing="1.5">JIM</text>
+
+            <circle cx="260" cy="370" r="10" fill="#1a1a1a"/>
+            <text x="276" y="374" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="700" fill="#1a1a1a" letter-spacing="1.5">LYU</text>
+
+            <circle cx="100" cy="370" r="10" fill="#1a1a1a"/>
+            <text x="84" y="374" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="700" fill="#1a1a1a" letter-spacing="1.5">PIN</text>
+
+            <circle cx="55"  cy="170" r="10" fill="#1a1a1a"/>
+            <text x="40" y="174" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="700" fill="#1a1a1a" letter-spacing="1.5">SDS</text>
+
+            <!-- ── INACTIVE / ORBIT (no edges visible) — alphabetical: AFK, TAC ── -->
+            <circle cx="35"  cy="50" r="6" fill="#1a1a1a" stroke="#d4ccb8" stroke-width="2" stroke-dasharray="2,2"/>
+            <text x="48" y="54" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="700" fill="#6b6558" letter-spacing="1.5">AFK</text>
+
+            <circle cx="325" cy="450" r="6" fill="#1a1a1a" stroke="#d4ccb8" stroke-width="2" stroke-dasharray="2,2"/>
+            <text x="312" y="454" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="700" fill="#6b6558" letter-spacing="1.5">TAC</text>
+          </svg>
+        </div>
+        <div class="link-legend">
+          <div class="legend-row"><div class="legend-line" style="background:var(--green);"></div><span>HIGH WR PAIRING</span></div>
+          <div class="legend-row"><div class="legend-line" style="background:var(--red);"></div><span>LOW WR PAIRING</span></div>
+          <div class="legend-row"><div class="legend-node node-isolated"></div><span>NO JOINT OPS</span></div>
+          <div class="legend-row"><span>LINE WEIGHT = JOINT GAMES</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ FIELD ASSESSMENTS ══ -->
+    <div class="analyst-bottom">
+      <div class="card fun-card">
+        <div class="fun-label">&bull; Field Assessment</div>
+        <div class="fun-title">Analyst Observations</div>
+        <div class="fun-subtitle">Judgments compiled from 30-day match data</div>
+        <div class="fun-body">
+          <div class="assessment-list">
+
+            <div class="assessment-item severity-green">
+              <div class="assessment-head">
+                <span class="assessment-code">OBS-01 &middot; CELL CORE</span>
+                <span class="assessment-tag badge badge-green">DEPLOY TOGETHER</span>
+              </div>
+              <div class="assessment-subject">jimmmaaayyy + iHazACatz</div>
+              <div class="assessment-note">
+                Joint WR: 71.2% across 48 deployments. Cell maximum. Underlying mechanism undetermined; cell members do not appear to track the metric. We assess with HIGH CONFIDENCE that separation of the pairing would degrade cell performance.
+              </div>
+            </div>
+
+            <div class="assessment-item severity-red assessment-redacted">
+              <div class="assessment-head">
+                <span class="assessment-code">OBS-02 &middot; <span class="redacted-inline" style="height:11px; width:88px;"></span></span>
+                <span class="assessment-tag badge badge-red">DISSOLVE PAIRING</span>
+              </div>
+              <div class="assessment-subject">Pin Pon + sdsOmega</div>
+              <div class="assessment-note">
+                <span class="vis">Joint WR: 42.8% across 19 deployments.</span>
+                <span class="blk" style="width:96px;"></span>
+                <span class="blk" style="width:42px;"></span>
+                <span class="vis">Champion overlap inconsistent.</span>
+                <span class="blk" style="width:128px;"></span>
+                <span class="blk" style="width:64px;"></span>
+                <span class="vis">Reintroduction unproductive.</span>
+                <span class="blk" style="width:152px;"></span>
+              </div>
+            </div>
+
+            <div class="assessment-item severity-red">
+              <div class="assessment-head">
+                <span class="assessment-code">OBS-03 &middot; TEMPORAL VARIANCE</span>
+                <span class="assessment-tag badge badge-red">IMPAIRED OPS</span>
+              </div>
+              <div class="assessment-subject">Post-Midnight Activity</div>
+              <div class="assessment-note">
+                Cell WR: 39.2% after 00:00 local. 28.1% after 02:00. Self-reported enjoyment is elevated; logged performance contradicts. Self-imposed curfew assessed as ALMOST CERTAINLY not forthcoming.
+              </div>
+            </div>
+
+            <div class="assessment-item severity-amber">
+              <div class="assessment-head">
+                <span class="assessment-code">OBS-04 &middot; POSITIONAL</span>
+                <span class="assessment-tag badge badge-amber">DOGMATISM</span>
+              </div>
+              <div class="assessment-subject">lyu</div>
+              <div class="assessment-note">
+                Mid lane in 83% of recorded matches. 17 cell-internal role-swap requests declined by subject this month. Position non-negotiable; team composition adjusts to accommodate.
+              </div>
+            </div>
+
+            <div class="assessment-item severity-black assessment-redacted">
+              <div class="assessment-head">
+                <span class="assessment-code">OBS-05 &middot; <span class="redacted-inline" style="height:11px; width:96px;"></span></span>
+                <span class="assessment-tag badge" style="background:var(--text); color:var(--bg);">CLASSIFIED</span>
+              </div>
+              <div class="assessment-subject"><span class="redacted-inline" style="height:18px; width:180px;"></span></div>
+              <div class="assessment-note">
+                <span class="blk" style="width:120px;"></span>
+                <span class="vis">Account history flagged.</span>
+                <span class="blk" style="width:80px;"></span>
+                <span class="blk" style="width:62px;"></span>
+                <span class="vis">Cross-reference incomplete.</span>
+                <span class="blk" style="width:148px;"></span>
+                <span class="blk" style="width:38px;"></span>
+                <span class="blk" style="width:104px;"></span>
+                <span class="vis">Surveillance maintained pending review.</span>
+                <span class="blk" style="width:74px;"></span>
+              </div>
+            </div>
+
+            <div class="assessment-item severity-blue">
+              <div class="assessment-head">
+                <span class="assessment-code">OBS-06 &middot; THEATER MISMATCH</span>
+                <span class="assessment-tag badge badge-blue">WRONG BATTLEFIELD</span>
+              </div>
+              <div class="assessment-subject">sdsOmega</div>
+              <div class="assessment-note">
+                ARAM WR: 73%. Ranked WR: 44%. Subject has PROBABLY selected the wrong theater. Cell-internal reassignment requests declined by subject. Surveillance continues.
+              </div>
+            </div>
+
+          </div>
+
+          <div style="margin-top: 28px; padding-top: 18px; border-top: 1px dashed var(--border); display:flex; gap:18px; flex-wrap:wrap; justify-content:space-between; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 1.8px; color: var(--muted);">
+            <span>ANALYST OF RECORD: <span class="redacted-inline" style="height:10px; width:88px;"></span></span>
+            <span>VERIFIED BY: <span class="redacted-inline" style="height:10px; width:74px;"></span></span>
+            <span>FILED: 2026-04-27 <span class="redacted-inline" style="height:10px; width:34px;"></span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer class="site-footer">DOCUMENT REF: LGN-2026-BRIEF-<span class="redacted-inline" style="height:8px; width:24px;"></span> &nbsp;//&nbsp; ORIGINATING OFFICE: LEGION/OPS &nbsp;//&nbsp; CASE: ZOO 2 &nbsp;//&nbsp; OVERSIGHT: <span class="redacted-inline" style="height:8px; width:38px;"></span> &nbsp;//&nbsp; DISTRIBUTION LIMITED &nbsp;//&nbsp; DECLASSIFY ON: CELL DISBANDMENT</footer>
+
+  <script>
+    /* ── DUO WIN RATES MATRIX ── alphabetical operator order ── */
+    const members = ['iHazACatz','jimmmaaayyy','lyu','Pin Pon','sdsOmega','The Afk King','UnfoldedTaco'];
+    const codes   = ['CAT','JIM','LYU','PIN','SDS','AFK','TAC'];
+    const wr = [
+      // CAT,  JIM,  LYU,  PIN,  SDS,  AFK,  TAC
+      [null, 71.2, 53.3, 44.1, 49.7, 48.9, 52.3], // CAT
+      [71.2, null, 56.8, 48.3, 54.1, 45.1, 47.2], // JIM
+      [53.3, 56.8, null, 46.2, 64.7, 51.0, 49.0], // LYU
+      [44.1, 48.3, 46.2, null, 42.8, 40.1, 38.2], // PIN
+      [49.7, 54.1, 64.7, 42.8, null, 50.3, 45.1], // SDS
+      [48.9, 45.1, 51.0, 40.1, 50.3, null, 44.0], // AFK
+      [52.3, 47.2, 49.0, 38.2, 45.1, 44.0, null], // TAC
+    ];
+    const gm = [
+      // CAT, JIM, LYU, PIN, SDS, AFK, TAC
+      [ 0, 48, 15,  6, 19, 10,  5], // CAT
+      [48,  0, 31,  8, 22, 12,  6], // JIM
+      [15, 31,  0,  9, 18,  7,  4], // LYU
+      [ 6,  8,  9,  0,  7,  2,  1], // PIN
+      [19, 22, 18,  7,  0,  6,  3], // SDS
+      [10, 12,  7,  2,  6,  0,  2], // AFK
+      [ 5,  6,  4,  1,  3,  2,  0], // TAC
+    ];
+    function cls(v, n){
+      if(v===null) return 'matrix-self';
+      if(n < 5) return 'matrix-empty';
+      if(v<48) return 'wr-low';
+      if(v<54) return 'wr-mid';
+      if(v<62) return 'wr-high';
+      return 'wr-great';
+    }
+    const mx = document.getElementById('synergyMatrix');
+    mx.appendChild(document.createElement('div'));
+    codes.forEach(c => { const d = document.createElement('div'); d.className='matrix-label-top'; d.textContent=c; mx.appendChild(d); });
+    members.forEach((rn, ri) => {
+      const rl = document.createElement('div'); rl.className='matrix-label'; rl.textContent = codes[ri]; mx.appendChild(rl);
+      members.forEach((cn, ci) => {
+        const c = document.createElement('div');
+        c.className = `matrix-cell ${cls(wr[ri][ci], gm[ri][ci])}`;
+        if(ri === ci) { c.textContent = '—'; }
+        else if(gm[ri][ci] < 5) { c.textContent = ''; c.setAttribute('data-tooltip', `${rn} + ${cn}: insufficient data (${gm[ri][ci]} games)`); }
+        else { c.textContent = wr[ri][ci].toFixed(0)+'%'; c.setAttribute('data-tooltip', `${rn} + ${cn}: ${wr[ri][ci]}% over ${gm[ri][ci]} games`); }
+        mx.appendChild(c);
+      });
+    });
+
+    /* ── HEATMAP ── */
+    const days = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+    const hd = [
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,3,3,2,1,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,2,3,2,1,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,3,4,4,3,1,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,2,3,2,1,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,3,4,5,5,4,2],
+      [0,0,1,0,0,0,0,0,0,0,1,1,2,3,3,4,4,5,5,5,5,4,3,1],
+      [0,0,0,0,0,0,0,0,0,0,1,2,2,3,4,4,5,5,4,4,3,2,1,0],
+    ];
+    const hg = document.getElementById('heatmap');
+    const hl = document.getElementById('hourLabels');
+    days.forEach((d,i) => {
+      const l = document.createElement('div'); l.className='heatmap-day-label'; l.textContent = d; hg.appendChild(l);
+      for(let h=0; h<24; h++) {
+        const c = document.createElement('div');
+        c.className = `heatmap-cell h-${hd[i][h]}`;
+        const g = hd[i][h]*3 + Math.floor(Math.random()*3);
+        const t = h===0 ? '12am' : h<12 ? h+'am' : h===12 ? '12pm' : (h-12)+'pm';
+        c.setAttribute('data-tooltip', `${d} ${t}: ${g} games`);
+        hg.appendChild(c);
+      }
+    });
+    hl.appendChild(document.createElement('div'));
+    for(let h=0; h<24; h++) {
+      const l = document.createElement('div'); l.className='heatmap-hour-label';
+      if(h%6===0) l.textContent = h===0?'12a':h<12?h+'a':h===12?'12p':(h-12)+'p';
+      hl.appendChild(l);
+    }
+
+    /* ── CELL SWITCHER toggle ──
+       Click the trigger to open the dropdown; click outside or hit Escape to close. */
+    (() => {
+      const switcher = document.getElementById('cellSwitcher');
+      if (!switcher) return;
+      const trigger = switcher.querySelector('.cell-switcher-trigger');
+      const setOpen = (open) => {
+        switcher.classList.toggle('open', open);
+        trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+      };
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        setOpen(!switcher.classList.contains('open'));
+      });
+      document.addEventListener('click', (e) => {
+        if (!switcher.contains(e.target)) setOpen(false);
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') setOpen(false);
+      });
+    })();
+
+    /* ── STICKY HEADER OFFSET ──
+       Track the live site-header height so .page-header sticks right beneath
+       it, surviving header reflow at narrow widths. */
+    function syncHeaderHeight() {
+      const h = document.querySelector('header.site-header')?.offsetHeight || 70;
+      document.documentElement.style.setProperty('--header-h', h + 'px');
+    }
+    syncHeaderHeight();
+    window.addEventListener('resize', syncHeaderHeight);
+    window.addEventListener('load', syncHeaderHeight);
+
+    /* ── COUNT-UP ANIMATION for key stats ── */
+    function countUp(el) {
+      const target = parseFloat(el.dataset.countup);
+      const isInt = el.dataset.integer === 'true';
+      const suffix = el.dataset.suffix || '';
+      const duration = 1400;
+      const start = performance.now();
+      function step(now) {
+        const progress = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const value = target * eased;
+        el.textContent = (isInt ? Math.round(value) : value.toFixed(1)) + suffix;
+        if (progress < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+    document.querySelectorAll('[data-countup]').forEach(el => {
+      // reset to 0 then animate when visible
+      const suffix = el.dataset.suffix || '';
+      el.textContent = (el.dataset.integer === 'true' ? '0' : '0.0') + suffix;
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(e => { if (e.isIntersecting) { countUp(el); io.unobserve(el); } });
+      }, { threshold: 0.2 });
+      io.observe(el);
+    });
+
+    /* ── LIVE SYNC TIMER (header) ── */
+    const syncEl = document.getElementById('syncTimer');
+    const pulledEl = document.getElementById('pulledAgo');
+    let secs = 3;
+    setInterval(() => {
+      secs++;
+      const m = Math.floor(secs / 60);
+      const s = secs % 60;
+      const h = Math.floor(m / 60);
+      const mm = m % 60;
+      syncEl.textContent =
+        String(h).padStart(2,'0') + ':' + String(mm).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+      pulledEl.textContent = secs < 60
+        ? secs + 's'
+        : Math.floor(secs/60) + 'm ' + (secs % 60) + 's';
+    }, 1000);
+  </script>
+
+</body>
+</html>

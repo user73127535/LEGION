@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LEGION — Authenticate</title>
+  <link rel="stylesheet" href="dossier.css" />
+  <style>
+    body { display: flex; flex-direction: column; }
+
+    .form-wrapper {
+      flex: 1;
+      display: flex; align-items: center; justify-content: center;
+      padding: 56px 24px;
+    }
+    .form-card {
+      width: 100%; max-width: 480px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 40px 44px 36px;
+      position: relative;
+    }
+    .form-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: var(--text);
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+    .form-card-banner {
+      position: absolute; top: 3px; left: 0; right: 0;
+      background: var(--text); color: var(--bg);
+      font-family: var(--font-mono);
+      font-size: 9px; letter-spacing: 3px;
+      text-align: center;
+      padding: 4px 12px 5px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .form-card { padding-top: 60px; }
+
+    .form-title {
+      font-family: var(--font-display);
+      font-size: 30px; font-weight: 700;
+      letter-spacing: -1px; margin-bottom: 8px;
+      line-height: 1.1;
+    }
+    .form-subtitle {
+      font-family: var(--font-mono);
+      font-size: 13px; color: var(--muted);
+      line-height: 1.7; margin-bottom: 28px;
+    }
+
+    /* Sign In / New Operator tabs */
+    .auth-tabs {
+      display: flex; gap: 0;
+      margin-bottom: 28px;
+      border-bottom: 1px solid var(--border);
+    }
+    .auth-tab {
+      flex: 1;
+      font-family: var(--font-display);
+      font-size: 12px; font-weight: 600;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      padding: 12px 8px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .auth-tab:hover { color: var(--text); }
+    .auth-tab.active {
+      color: var(--text);
+      border-bottom-color: var(--text);
+    }
+
+    .field { margin-bottom: 20px; }
+    .field label {
+      display: block;
+      font-family: var(--font-mono);
+      font-size: 10px; letter-spacing: 2.5px; color: var(--muted);
+      margin-bottom: 8px; font-weight: 600;
+    }
+    .field input {
+      width: 100%;
+      font-family: var(--font-mono);
+      font-size: 14px;
+      padding: 13px 14px;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      border-radius: var(--radius);
+    }
+    .field input:focus {
+      border-color: var(--text);
+      box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.10);
+    }
+    .field input::placeholder { color: #c3bdb0; }
+
+    .riot-id-row {
+      display: flex; gap: 10px; align-items: flex-end;
+    }
+    .riot-id-row .field { flex: 1; margin-bottom: 0; }
+    .riot-id-row .field:last-child { flex: 0 0 120px; }
+    .riot-id-hash {
+      padding-bottom: 14px;
+      font-family: var(--font-stat);
+      font-size: 20px; font-weight: 700; color: var(--muted);
+    }
+    .riot-id-row { margin-bottom: 20px; }
+
+    .auth-form { display: none; }
+    .auth-form.active { display: block; }
+
+    .submit-btn {
+      font-family: var(--font-display);
+      font-size: 14px; font-weight: 700;
+      letter-spacing: 1.8px;
+      padding: 18px 32px;
+      border: none;
+      background: var(--text);
+      color: var(--bg);
+      cursor: pointer;
+      width: 100%;
+      margin-top: 16px;
+      text-transform: uppercase;
+      border-radius: var(--radius);
+      transition: background 0.15s;
+    }
+    .submit-btn:hover { background: #000; }
+
+    .forgot-link {
+      text-align: center;
+      margin-top: 14px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    .forgot-link a {
+      color: var(--muted); text-decoration: none;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1px;
+    }
+    .forgot-link a:hover { color: var(--text); border-color: var(--text); }
+
+    @media (max-width: 520px) {
+      .form-card { padding: 60px 24px 28px; }
+    }
+  </style>
+</head>
+<body class="bg-grid-page">
+
+  <header class="site-header">
+    <div class="header-left">
+      <a href="landing.html" class="logo">LEGION</a>
+      <div class="cell-switcher disabled" aria-disabled="true" title="Authenticate to access case files">
+        <button class="cell-switcher-trigger" type="button" tabindex="-1">
+          <span class="cs-redacted-bar"></span>
+          <span class="chev">&#9662;</span>
+        </button>
+      </div>
+      <nav>
+        <a href="briefing.html">Briefing</a>
+        <a href="match-history.html">Operation Log</a>
+        <a href="about.html">About</a>
+      </nav>
+    </div>
+    <div class="header-right">
+      <!-- on the authenticate page itself, no header CTAs needed —
+           the form is the action. -->
+    </div>
+  </header>
+
+  <section class="form-wrapper">
+    <div class="form-card">
+      <div class="form-card-banner">CONFIDENTIAL // OPERATOR AUTHENTICATION // HANDLE WITH CARE</div>
+      <h1 class="form-title">Authenticate</h1>
+      <p class="form-subtitle">
+        Sign in to an existing operator file, or open a new one. Cell designation follows after authentication.
+      </p>
+
+      <div class="auth-tabs" role="tablist">
+        <button class="auth-tab active" type="button" data-mode="signin" role="tab">Sign In</button>
+        <button class="auth-tab" type="button" data-mode="signup" role="tab">New Operator</button>
+      </div>
+
+      <!-- Sign In form -->
+      <form class="auth-form active" data-mode="signin">
+        <div class="field">
+          <label>EMAIL</label>
+          <input type="email" placeholder="you@email.com" />
+        </div>
+        <div class="field">
+          <label>PASSWORD</label>
+          <input type="password" placeholder="" />
+        </div>
+        <button type="submit" class="submit-btn">Authenticate</button>
+        <div class="forgot-link">
+          <a href="#">Forgot password?</a>
+        </div>
+      </form>
+
+      <!-- New Operator form -->
+      <form class="auth-form" data-mode="signup">
+        <div class="field">
+          <label>EMAIL</label>
+          <input type="email" placeholder="you@email.com" />
+        </div>
+        <div class="field">
+          <label>PASSWORD</label>
+          <input type="password" placeholder="minimum eight characters" />
+        </div>
+        <div class="riot-id-row">
+          <div class="field">
+            <label>RIOT GAME NAME</label>
+            <input type="text" placeholder="YourName" />
+          </div>
+          <div class="riot-id-hash">#</div>
+          <div class="field">
+            <label>TAG</label>
+            <input type="text" placeholder="NA1" />
+          </div>
+        </div>
+        <button type="submit" class="submit-btn">Open Operator File</button>
+      </form>
+    </div>
+  </section>
+
+  <footer class="site-footer">DOCUMENT REF: LGN-2026-AUTH-<span class="redacted-inline" style="height:8px; width:24px;"></span> &nbsp;//&nbsp; ORIGINATING OFFICE: LEGION/AUTH &nbsp;//&nbsp; OVERSIGHT: <span class="redacted-inline" style="height:8px; width:38px;"></span> &nbsp;//&nbsp; DISTRIBUTION LIMITED</footer>
+
+  <script>
+    /* Tab toggle: Sign In / New Operator */
+    const tabs  = document.querySelectorAll('.auth-tab');
+    const forms = document.querySelectorAll('.auth-form');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const mode = tab.dataset.mode;
+        tabs.forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+        forms.forEach(f => f.classList.toggle('active', f.dataset.mode === mode));
+      });
+    });
+  </script>
+
+</body>
+</html>

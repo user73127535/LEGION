@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LEGION — Mockup C: Technical Manual</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@300;400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #fff;
+    color: #111;
+    font-family: 'IBM Plex Mono', 'Courier New', monospace;
+    font-size: 12.5px;
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  .page {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 60px 48px;
+  }
+
+  /* ---- COVER / TITLE BLOCK ---- */
+  .cover {
+    text-align: center;
+    padding: 48px 0 40px;
+    border-bottom: 3px solid #111;
+    margin-bottom: 40px;
+  }
+
+  .cover .doc-number {
+    font-size: 10px;
+    letter-spacing: 4px;
+    color: #888;
+    margin-bottom: 24px;
+  }
+
+  .cover h1 {
+    font-family: 'Courier Prime', monospace;
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: 16px;
+    margin-bottom: 8px;
+  }
+
+  .cover .cover-sub {
+    font-size: 13px;
+    letter-spacing: 3px;
+    color: #555;
+    margin-bottom: 32px;
+  }
+
+  .cover .cover-meta {
+    font-size: 11px;
+    color: #888;
+    line-height: 2;
+  }
+
+  /* ---- NAV / TOC ---- */
+  .toc {
+    margin-bottom: 40px;
+    padding: 20px 0;
+    border-bottom: 1px solid #ddd;
+  }
+
+  .toc-title {
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #888;
+    margin-bottom: 12px;
+    font-weight: 600;
+  }
+
+  .toc-list {
+    list-style: none;
+  }
+
+  .toc-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    border-bottom: 1px dotted #ccc;
+  }
+
+  .toc-list a {
+    color: #111;
+    text-decoration: none;
+    font-size: 12px;
+  }
+
+  .toc-list a:hover { text-decoration: underline; }
+
+  .toc-list .toc-page {
+    color: #888;
+    font-size: 11px;
+  }
+
+  /* ---- SECTION HEADINGS ---- */
+  .section {
+    margin-bottom: 40px;
+  }
+
+  .section-head {
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #111;
+  }
+
+  .section-head .section-num {
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: #888;
+    font-weight: 600;
+  }
+
+  .section-head h2 {
+    font-family: 'Courier Prime', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .subsection-head {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    margin: 24px 0 8px;
+    color: #333;
+  }
+
+  .subsection-head .sub-num {
+    color: #888;
+    margin-right: 8px;
+  }
+
+  /* ---- BODY TEXT ---- */
+  .section p {
+    margin-bottom: 12px;
+  }
+
+  .section p.note {
+    padding-left: 20px;
+    border-left: 3px solid #ddd;
+    color: #555;
+    font-size: 11px;
+    margin: 16px 0;
+  }
+
+  /* ---- NUMBERED LIST ---- */
+  .proc-list {
+    list-style: none;
+    counter-reset: proc;
+    margin: 12px 0;
+  }
+
+  .proc-list li {
+    counter-increment: proc;
+    padding: 4px 0 4px 32px;
+    position: relative;
+  }
+
+  .proc-list li::before {
+    content: counter(proc) ".";
+    position: absolute;
+    left: 0;
+    font-weight: 700;
+    color: #888;
+    width: 24px;
+    text-align: right;
+  }
+
+  /* ---- TABLES ---- */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 11.5px;
+  }
+
+  .data-table th {
+    text-align: left;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 8px 10px;
+    border-top: 2px solid #111;
+    border-bottom: 1px solid #111;
+    color: #555;
+  }
+
+  .data-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #e0e0e0;
+    vertical-align: top;
+  }
+
+  .data-table tbody tr:last-child td {
+    border-bottom: 2px solid #111;
+  }
+
+  .data-table .mono {
+    font-family: 'Courier Prime', monospace;
+    font-weight: 700;
+  }
+
+  .data-table .dim { color: #888; }
+
+  /* ---- STAT BLOCKS ---- */
+  .stat-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 0;
+    margin: 16px 0;
+    border-top: 2px solid #111;
+    border-bottom: 2px solid #111;
+  }
+
+  .stat-block {
+    padding: 14px 12px;
+    border-right: 1px solid #ddd;
+  }
+
+  .stat-block:last-child { border-right: none; }
+
+  .stat-block .stat-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #888;
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+
+  .stat-block .stat-value {
+    font-family: 'Courier Prime', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .stat-block .stat-note {
+    font-size: 10px;
+    color: #aaa;
+    margin-top: 2px;
+  }
+
+  /* ---- FORM INPUTS ---- */
+  .form-section {
+    margin: 16px 0;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 16px;
+  }
+
+  .form-field label {
+    display: block;
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #888;
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+
+  .form-field input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid #111;
+    font-family: 'Courier Prime', monospace;
+    font-size: 14px;
+    padding: 6px 0;
+    color: #111;
+    outline: none;
+  }
+
+  .form-field input:focus {
+    border-bottom-width: 2px;
+  }
+
+  .form-field-full {
+    grid-column: 1 / -1;
+  }
+
+  /* ---- BUTTONS ---- */
+  .btn {
+    display: inline-block;
+    background: #111;
+    color: #fff;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 10px 24px;
+    border: none;
+    cursor: pointer;
+  }
+
+  .btn:hover { background: #333; }
+
+  .btn-text {
+    background: none;
+    color: #111;
+    padding: 10px 0;
+    text-decoration: underline;
+  }
+
+  .btn-text:hover { color: #555; }
+
+  /* ---- FOOTER ---- */
+  .doc-footer {
+    margin-top: 60px;
+    padding-top: 16px;
+    border-top: 3px solid #111;
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    color: #888;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* ---- FIGURE CAPTION ---- */
+  .fig-caption {
+    font-size: 10px;
+    color: #888;
+    font-style: italic;
+    margin-top: 4px;
+    margin-bottom: 16px;
+  }
+
+  /* ---- RULE LINES ---- */
+  .rule { border-top: 1px solid #ddd; margin: 32px 0; }
+  .rule-heavy { border-top: 2px solid #111; margin: 32px 0; }
+
+  /* ---- INLINE ROSTER ---- */
+  .roster {
+    list-style: none;
+    margin: 12px 0;
+  }
+
+  .roster li {
+    padding: 6px 0;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+  }
+
+  .roster .tag { color: #888; font-size: 11px; }
+
+  @media (max-width: 600px) {
+    .page { padding: 30px 20px; }
+    .stat-row { grid-template-columns: 1fr 1fr; }
+    .stat-block { border-bottom: 1px solid #ddd; }
+    .form-row { grid-template-columns: 1fr; }
+    .cover h1 { font-size: 24px; letter-spacing: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ============================================ -->
+  <!-- COVER                                        -->
+  <!-- ============================================ -->
+  <div class="cover">
+    <div class="doc-number">TM-LEGION-001-2026</div>
+    <h1>LEGION</h1>
+    <div class="cover-sub">Group Performance Tracking System</div>
+    <div class="cover-meta">
+      Version 1.0<br>
+      Effective Date: 2026-04-05<br>
+      Distribution: Authorized Users
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- TABLE OF CONTENTS                            -->
+  <!-- ============================================ -->
+  <div class="toc">
+    <div class="toc-title">Contents</div>
+    <ul class="toc-list">
+      <li><a href="#s1">1. System Overview</a><span class="toc-page">1</span></li>
+      <li><a href="#s2">2. Cell Briefing</a><span class="toc-page">1</span></li>
+      <li><a href="#s3">3. Field Report</a><span class="toc-page">2</span></li>
+      <li><a href="#s4">4. Operation Log</a><span class="toc-page">3</span></li>
+      <li><a href="#s5">5. User Registration</a><span class="toc-page">3</span></li>
+      <li><a href="#s6">6. Authentication</a><span class="toc-page">4</span></li>
+    </ul>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- 1. SYSTEM OVERVIEW (LANDING)                 -->
+  <!-- ============================================ -->
+  <div id="s1" class="section">
+    <div class="section-head">
+      <div class="section-num">Section 1</div>
+      <h2>System Overview</h2>
+    </div>
+
+    <p>LEGION is a system for analyzing the collective performance of player groups in League of Legends. Standard tracking platforms (op.gg, u.gg, etc.) report individual statistics. This system does not.</p>
+
+    <p>All metrics computed by LEGION are derived from matches in which two or more members of a registered group (designated "cell") participated simultaneously. This constraint is applied at query time and cannot be overridden.</p>
+
+    <p class="note">Note: LEGION requires each user to register a valid Riot ID. Match data is retrieved from the Riot Games API and cached locally after first retrieval.</p>
+
+    <div class="subsection-head"><span class="sub-num">1.1</span>System Outputs</div>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Output</th>
+          <th>Purpose</th>
+          <th>Access</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="mono">Briefing</td>
+          <td>Cell membership and recent activity summary</td>
+          <td>Authenticated</td>
+        </tr>
+        <tr>
+          <td class="mono">Field Report</td>
+          <td>Win rates, champion synergy, mode-by-mode breakdown</td>
+          <td>Authenticated</td>
+        </tr>
+        <tr>
+          <td class="mono">Operation Log</td>
+          <td>Chronological record of joint matches</td>
+          <td>Authenticated</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top: 20px; display: flex; gap: 12px;">
+      <button class="btn">Enlist</button>
+      <button class="btn-text btn">Authenticate</button>
+    </div>
+  </div>
+
+  <div class="rule"></div>
+
+  <!-- ============================================ -->
+  <!-- 2. CELL BRIEFING                             -->
+  <!-- ============================================ -->
+  <div id="s2" class="section">
+    <div class="section-head">
+      <div class="section-num">Section 2</div>
+      <h2>Cell Briefing</h2>
+    </div>
+
+    <p>The briefing page displays all cells associated with the authenticated user, along with current membership counts and last-known activity dates.</p>
+
+    <div class="subsection-head"><span class="sub-num">2.1</span>Active Cells</div>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Designation</th>
+          <th>Members</th>
+          <th>Established</th>
+          <th>Last Active</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="mono">FIRETEAM ALPHA</td>
+          <td>4</td>
+          <td>2026-02-14</td>
+          <td>2026-04-04</td>
+        </tr>
+        <tr>
+          <td class="mono">TUESDAY GROUP</td>
+          <td>3</td>
+          <td>2026-03-01</td>
+          <td>2026-04-03</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="note">Note: A user may belong to multiple cells. Creating a new cell requires at minimum one Riot ID (the creator's).</p>
+
+    <button class="btn" style="margin-top: 8px;">+ Register New Cell</button>
+  </div>
+
+  <div class="rule"></div>
+
+  <!-- ============================================ -->
+  <!-- 3. FIELD REPORT                              -->
+  <!-- ============================================ -->
+  <div id="s3" class="section">
+    <div class="section-head">
+      <div class="section-num">Section 3</div>
+      <h2>Field Report</h2>
+    </div>
+
+    <p>The field report provides a statistical summary for a selected cell over the full reporting period (from cell creation to present).</p>
+
+    <div class="subsection-head"><span class="sub-num">3.1</span>Performance Summary</div>
+
+    <div class="stat-row">
+      <div class="stat-block">
+        <div class="stat-label">Win Rate (Together)</div>
+        <div class="stat-value">58.3%</div>
+        <div class="stat-note">48 games</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">Win Rate (Apart)</div>
+        <div class="stat-value">46.1%</div>
+        <div class="stat-note">baseline</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">Total Operations</div>
+        <div class="stat-value">48</div>
+        <div class="stat-note">since est.</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">Active Members</div>
+        <div class="stat-value">4/4</div>
+        <div class="stat-note">reporting</div>
+      </div>
+    </div>
+    <div class="fig-caption">Figure 3-1. Aggregate performance metrics for FIRETEAM ALPHA.</div>
+
+    <div class="subsection-head"><span class="sub-num">3.2</span>Champion Synergy Analysis</div>
+
+    <p>The following table lists the most frequently observed champion pairings among cell members, ranked by sample size.</p>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Operatives</th>
+          <th>Champions</th>
+          <th>Games</th>
+          <th>Win %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Player1, Player2</td>
+          <td class="mono">Leona / Jinx</td>
+          <td class="mono">12</td>
+          <td class="mono">75.0%</td>
+        </tr>
+        <tr>
+          <td>Player3, Player1</td>
+          <td class="mono">Nautilus / Kai'Sa</td>
+          <td class="mono">8</td>
+          <td class="mono">62.5%</td>
+        </tr>
+        <tr>
+          <td>Player2, Player4</td>
+          <td class="mono">Thresh / Ezreal</td>
+          <td class="mono">6</td>
+          <td class="mono">33.3%</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="fig-caption">Table 3-2. Champion synergy pairs, sorted by games played.</div>
+
+    <div class="subsection-head"><span class="sub-num">3.3</span>Performance by Game Mode</div>
+
+    <div class="stat-row" style="grid-template-columns: 1fr 1fr 1fr;">
+      <div class="stat-block">
+        <div class="stat-label">Ranked</div>
+        <div class="stat-value">63.6%</div>
+        <div class="stat-note">22 games</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">Normal</div>
+        <div class="stat-value">50.0%</div>
+        <div class="stat-note">14 games</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">ARAM</div>
+        <div class="stat-value">58.3%</div>
+        <div class="stat-note">12 games</div>
+      </div>
+    </div>
+
+    <div class="subsection-head"><span class="sub-num">3.4</span>Cell Roster</div>
+
+    <ul class="roster">
+      <li><span class="mono">Player1</span> <span class="tag">Player1#NA1</span></li>
+      <li><span class="mono">Player2</span> <span class="tag">Player2#NA1</span></li>
+      <li><span class="mono">Player3</span> <span class="tag">Player3#EUW</span></li>
+      <li><span class="mono">Player4</span> <span class="tag">Player4#NA1</span></li>
+    </ul>
+  </div>
+
+  <div class="rule"></div>
+
+  <!-- ============================================ -->
+  <!-- 4. OPERATION LOG                             -->
+  <!-- ============================================ -->
+  <div id="s4" class="section">
+    <div class="section-head">
+      <div class="section-num">Section 4</div>
+      <h2>Operation Log</h2>
+    </div>
+
+    <p>Chronological listing of all matches in which two or more cell members participated. Sorted by date, most recent first.</p>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Mode</th>
+          <th>Participants</th>
+          <th>Duration</th>
+          <th>Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2026-04-04</td>
+          <td>Ranked</td>
+          <td>Player1, Player2, Player3</td>
+          <td class="mono">32:14</td>
+          <td class="mono">W</td>
+        </tr>
+        <tr>
+          <td>2026-04-04</td>
+          <td>ARAM</td>
+          <td>Player1, Player4</td>
+          <td class="mono">18:42</td>
+          <td class="mono">L</td>
+        </tr>
+        <tr>
+          <td>2026-04-03</td>
+          <td>Ranked</td>
+          <td>Player2, Player3</td>
+          <td class="mono">28:55</td>
+          <td class="mono">W</td>
+        </tr>
+        <tr>
+          <td>2026-04-03</td>
+          <td>Normal</td>
+          <td>All (4)</td>
+          <td class="mono">35:20</td>
+          <td class="mono">W</td>
+        </tr>
+        <tr>
+          <td>2026-04-02</td>
+          <td>Ranked</td>
+          <td>Player1, Player3</td>
+          <td class="mono">41:07</td>
+          <td class="mono">L</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="fig-caption">Table 4-1. Recent joint operations, FIRETEAM ALPHA.</div>
+  </div>
+
+  <div class="rule"></div>
+
+  <!-- ============================================ -->
+  <!-- 5. REGISTRATION                              -->
+  <!-- ============================================ -->
+  <div id="s5" class="section">
+    <div class="section-head">
+      <div class="section-num">Section 5</div>
+      <h2>User Registration</h2>
+    </div>
+
+    <p>New users must complete the following registration procedure:</p>
+
+    <ol class="proc-list">
+      <li>Provide a valid email address and create a password.</li>
+      <li>Enter your Riot ID (Game Name and Tag Line).</li>
+      <li>Submit the form. The system will verify your Riot ID against the Riot Games API.</li>
+      <li>Upon successful registration, proceed to Authentication (Section 6).</li>
+    </ol>
+
+    <div class="form-section">
+      <div class="form-row">
+        <div class="form-field form-field-full">
+          <label>Email Address</label>
+          <input type="email" placeholder="user@example.com">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field form-field-full">
+          <label>Password</label>
+          <input type="password">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label>Riot Game Name</label>
+          <input type="text" placeholder="GameName">
+        </div>
+        <div class="form-field">
+          <label>Tag Line</label>
+          <input type="text" placeholder="NA1">
+        </div>
+      </div>
+    </div>
+
+    <button class="btn">Submit Registration</button>
+  </div>
+
+  <div class="rule"></div>
+
+  <!-- ============================================ -->
+  <!-- 6. AUTHENTICATION                            -->
+  <!-- ============================================ -->
+  <div id="s6" class="section">
+    <div class="section-head">
+      <div class="section-num">Section 6</div>
+      <h2>Authentication</h2>
+    </div>
+
+    <p>Returning users authenticate with their registered email and password. Upon successful authentication, the user is directed to the Cell Briefing (Section 2).</p>
+
+    <div class="form-section">
+      <div class="form-row">
+        <div class="form-field form-field-full">
+          <label>Email Address</label>
+          <input type="email" placeholder="user@example.com">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field form-field-full">
+          <label>Password</label>
+          <input type="password">
+        </div>
+      </div>
+    </div>
+
+    <button class="btn">Authenticate</button>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- FOOTER                                       -->
+  <!-- ============================================ -->
+  <div class="doc-footer">
+    <span>TM-LEGION-001-2026</span>
+    <span>Version 1.0</span>
+    <span>Page 1</span>
+  </div>
+
+</div>
+
+</body>
+</html>

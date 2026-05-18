@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LEGION — Mockup A: Declassified Memo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Special+Elite&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #f5f0e8;
+    color: #1a1a1a;
+    font-family: 'Courier Prime', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* Subtle paper texture feel */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 28px,
+      rgba(0,0,0,0.02) 28px,
+      rgba(0,0,0,0.02) 29px
+    );
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  .page {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 60px 40px;
+  }
+
+  /* ---- HEADER / LETTERHEAD ---- */
+  .doc-header {
+    text-align: center;
+    padding-bottom: 30px;
+    border-bottom: 2px solid #1a1a1a;
+    margin-bottom: 30px;
+  }
+
+  .doc-header h1 {
+    font-family: 'Courier Prime', monospace;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 12px;
+    margin-bottom: 4px;
+  }
+
+  .doc-header .subtitle {
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: #555;
+  }
+
+  /* ---- DOCUMENT META ---- */
+  .doc-meta {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 4px 16px;
+    margin-bottom: 30px;
+    font-size: 12px;
+  }
+
+  .doc-meta dt {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .doc-meta dd {
+    color: #333;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid #999;
+    margin: 30px 0;
+  }
+
+  .divider-double {
+    border: none;
+    border-top: 3px double #1a1a1a;
+    margin: 30px 0;
+  }
+
+  /* ---- NAVIGATION ---- */
+  .nav {
+    display: flex;
+    gap: 24px;
+    padding: 12px 0;
+    border-top: 1px solid #ccc;
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 30px;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .nav a {
+    color: #1a1a1a;
+    text-decoration: none;
+  }
+
+  .nav a:hover {
+    text-decoration: underline;
+  }
+
+  .nav a.active {
+    font-weight: 700;
+    border-bottom: 2px solid #1a1a1a;
+    padding-bottom: 2px;
+  }
+
+  /* ---- STAMP ---- */
+  .stamp {
+    display: inline-block;
+    border: 3px solid #1a1a1a;
+    padding: 4px 16px;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    transform: rotate(-3deg);
+    margin: 20px 0;
+    opacity: 0.7;
+  }
+
+  /* ---- CONTENT SECTIONS ---- */
+  .section {
+    margin-bottom: 36px;
+  }
+
+  .section-number {
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: #666;
+    margin-bottom: 4px;
+  }
+
+  .section h2 {
+    font-family: 'Courier Prime', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #ccc;
+  }
+
+  .section p {
+    margin-bottom: 12px;
+    color: #333;
+  }
+
+  /* ---- STAT TABLE ---- */
+  .stat-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 12px;
+  }
+
+  .stat-table th {
+    text-align: left;
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 8px 12px;
+    border-bottom: 2px solid #1a1a1a;
+    color: #555;
+  }
+
+  .stat-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #ddd;
+    color: #1a1a1a;
+  }
+
+  .stat-table tr:last-child td {
+    border-bottom: 2px solid #1a1a1a;
+  }
+
+  .stat-table .num {
+    font-weight: 700;
+    font-size: 14px;
+  }
+
+  /* ---- FIELD/FORM STYLE ENTRIES ---- */
+  .field-row {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+
+  .field-label {
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    min-width: 160px;
+  }
+
+  .field-value {
+    flex: 1;
+    border-bottom: 1px solid #999;
+    padding-bottom: 2px;
+    min-height: 18px;
+  }
+
+  .field-value.empty {
+    color: #aaa;
+    font-style: italic;
+  }
+
+  /* ---- REDACTED ---- */
+  .redacted {
+    background: #1a1a1a;
+    color: #1a1a1a;
+    padding: 0 8px;
+    user-select: none;
+  }
+
+  /* ---- DISTRIBUTION LINE ---- */
+  .distribution {
+    margin-top: 40px;
+    padding-top: 16px;
+    border-top: 1px solid #999;
+    font-size: 10px;
+    color: #888;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* ---- CARDS ---- */
+  .stat-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 20px 0;
+  }
+
+  .stat-card {
+    border: 1px solid #999;
+    padding: 16px;
+    text-align: center;
+  }
+
+  .stat-card .label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #666;
+    margin-bottom: 6px;
+  }
+
+  .stat-card .value {
+    font-size: 28px;
+    font-weight: 700;
+    font-family: 'Courier Prime', monospace;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .stat-card .note {
+    font-size: 10px;
+    color: #888;
+  }
+
+  /* ---- FORM INPUTS ---- */
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-group label {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #555;
+    margin-bottom: 4px;
+  }
+
+  .form-group input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid #1a1a1a;
+    font-family: 'Courier Prime', monospace;
+    font-size: 14px;
+    padding: 6px 0;
+    color: #1a1a1a;
+    outline: none;
+  }
+
+  .btn {
+    display: inline-block;
+    background: #1a1a1a;
+    color: #f5f0e8;
+    font-family: 'Courier Prime', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 10px 28px;
+    border: none;
+    cursor: pointer;
+  }
+
+  .btn:hover {
+    background: #333;
+  }
+
+  .btn-outline {
+    background: transparent;
+    color: #1a1a1a;
+    border: 1px solid #1a1a1a;
+  }
+
+  .btn-outline:hover {
+    background: #1a1a1a;
+    color: #f5f0e8;
+  }
+
+  /* ---- FOOTER ---- */
+  .doc-footer {
+    margin-top: 60px;
+    padding-top: 16px;
+    border-top: 2px solid #1a1a1a;
+    font-size: 10px;
+    color: #888;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  /* ---- PAGE LABELS ---- */
+  .page-label {
+    display: inline-block;
+    font-size: 9px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #888;
+    margin-bottom: 20px;
+  }
+
+  /* ---- OPERATION LOG TABLE ---- */
+  .op-log {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+    margin: 16px 0;
+  }
+
+  .op-log th {
+    text-align: left;
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 6px 8px;
+    border-bottom: 2px solid #1a1a1a;
+    color: #666;
+  }
+
+  .op-log td {
+    padding: 6px 8px;
+    border-bottom: 1px dotted #ccc;
+  }
+
+  .result-w { font-weight: 700; }
+  .result-l { color: #888; }
+
+  @media (max-width: 600px) {
+    .page { padding: 30px 20px; }
+    .stat-cards { grid-template-columns: 1fr; }
+    .doc-meta { grid-template-columns: 100px 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ============================================ -->
+  <!-- HEADER                                       -->
+  <!-- ============================================ -->
+  <header class="doc-header">
+    <h1>LEGION</h1>
+    <div class="subtitle">Group Performance Tracking System</div>
+  </header>
+
+  <nav class="nav">
+    <a href="#landing" class="active">Index</a>
+    <a href="#briefing">Briefing</a>
+    <a href="#field-report">Field Report</a>
+    <a href="#op-log">Operation Log</a>
+    <a href="#enlist">Enlist</a>
+  </nav>
+
+  <!-- ============================================ -->
+  <!-- SECTION: LANDING                             -->
+  <!-- ============================================ -->
+  <div id="landing" class="section">
+    <div class="page-label">Landing Page</div>
+
+    <dl class="doc-meta">
+      <dt>System</dt>
+      <dd>LEGION v1.0</dd>
+      <dt>Purpose</dt>
+      <dd>Multi-operative performance analysis for League of Legends</dd>
+      <dt>Scope</dt>
+      <dd>Group (CELL) statistics only. Individual tracking is outside the purview of this system.</dd>
+      <dt>Date</dt>
+      <dd>2026-04-05</dd>
+    </dl>
+
+    <div class="stamp">Unclassified</div>
+
+    <p>LEGION is a system for tracking the performance of groups of players who regularly participate in League of Legends matches together. Standard tracking platforms analyze individual performance. This system does not. All metrics are computed over games where two or more members of a registered group were present.</p>
+
+    <p>This system provides three primary outputs:</p>
+
+    <table class="stat-table">
+      <thead>
+        <tr>
+          <th>Output</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Briefing</strong></td>
+          <td>Overview of cell activity and membership status</td>
+        </tr>
+        <tr>
+          <td><strong>Field Report</strong></td>
+          <td>Win rates, champion synergies, and mode breakdowns for joint games</td>
+        </tr>
+        <tr>
+          <td><strong>Operation Log</strong></td>
+          <td>Chronological record of all matches involving 2+ cell members</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top: 24px; display: flex; gap: 12px;">
+      <button class="btn">Enlist</button>
+      <button class="btn-outline btn">Authenticate</button>
+    </div>
+  </div>
+
+  <hr class="divider-double">
+
+  <!-- ============================================ -->
+  <!-- SECTION: BRIEFING (DASHBOARD)                -->
+  <!-- ============================================ -->
+  <div id="briefing" class="section">
+    <div class="page-label">Briefing / Dashboard</div>
+
+    <div class="section-number">Section I</div>
+    <h2>Cell Briefing</h2>
+
+    <dl class="doc-meta">
+      <dt>Operative</dt>
+      <dd>jjlee@example.com</dd>
+      <dt>Clearance</dt>
+      <dd>Authenticated</dd>
+    </dl>
+
+    <p>Active cells registered to this operative:</p>
+
+    <table class="stat-table">
+      <thead>
+        <tr>
+          <th>Designation</th>
+          <th>Members</th>
+          <th>Established</th>
+          <th>Last Activity</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>FIRETEAM ALPHA</strong></td>
+          <td>4</td>
+          <td>2026-02-14</td>
+          <td>2026-04-04</td>
+        </tr>
+        <tr>
+          <td><strong>TUESDAY GROUP</strong></td>
+          <td>3</td>
+          <td>2026-03-01</td>
+          <td>2026-04-03</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <button class="btn" style="margin-top: 12px;">+ Register New Cell</button>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ============================================ -->
+  <!-- SECTION: FIELD REPORT                        -->
+  <!-- ============================================ -->
+  <div id="field-report" class="section">
+    <div class="page-label">Field Report</div>
+
+    <div class="section-number">Section II</div>
+    <h2>Field Report: Fireteam Alpha</h2>
+
+    <dl class="doc-meta">
+      <dt>Cell</dt>
+      <dd>FIRETEAM ALPHA</dd>
+      <dt>Members</dt>
+      <dd>4 operatives</dd>
+      <dt>Reporting Period</dt>
+      <dd>2026-02-14 through 2026-04-05</dd>
+    </dl>
+
+    <h3 style="font-size: 12px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; color: #555;">II-A. Performance Summary</h3>
+
+    <div class="stat-cards">
+      <div class="stat-card">
+        <div class="label">Win Rate (Together)</div>
+        <div class="value">58.3%</div>
+        <div class="note">over 48 joint games</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Win Rate (Apart)</div>
+        <div class="value">46.1%</div>
+        <div class="note">individual baseline</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Total Operations</div>
+        <div class="value">48</div>
+        <div class="note">since 2026-02-14</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Active Operatives</div>
+        <div class="value">4</div>
+        <div class="note">of 4 registered</div>
+      </div>
+    </div>
+
+    <h3 style="font-size: 12px; letter-spacing: 2px; text-transform: uppercase; margin: 24px 0 12px; color: #555;">II-B. Champion Synergy Analysis</h3>
+
+    <table class="stat-table">
+      <thead>
+        <tr>
+          <th>Operatives</th>
+          <th>Champions</th>
+          <th>Games</th>
+          <th>Win %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Player1 / Player2</td>
+          <td>Leona / Jinx</td>
+          <td class="num">12</td>
+          <td class="num">75.0%</td>
+        </tr>
+        <tr>
+          <td>Player3 / Player1</td>
+          <td>Nautilus / Kai'Sa</td>
+          <td class="num">8</td>
+          <td class="num">62.5%</td>
+        </tr>
+        <tr>
+          <td>Player2 / Player4</td>
+          <td>Thresh / Ezreal</td>
+          <td class="num">6</td>
+          <td class="num">33.3%</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 style="font-size: 12px; letter-spacing: 2px; text-transform: uppercase; margin: 24px 0 12px; color: #555;">II-C. Performance by Mode</h3>
+
+    <table class="stat-table">
+      <thead>
+        <tr>
+          <th>Mode</th>
+          <th>Games</th>
+          <th>Win %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Summoner's Rift (Ranked)</td>
+          <td class="num">22</td>
+          <td class="num">63.6%</td>
+        </tr>
+        <tr>
+          <td>Summoner's Rift (Normal)</td>
+          <td class="num">14</td>
+          <td class="num">50.0%</td>
+        </tr>
+        <tr>
+          <td>ARAM</td>
+          <td class="num">12</td>
+          <td class="num">58.3%</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ============================================ -->
+  <!-- SECTION: OPERATION LOG                       -->
+  <!-- ============================================ -->
+  <div id="op-log" class="section">
+    <div class="page-label">Operation Log</div>
+
+    <div class="section-number">Section III</div>
+    <h2>Operation Log: Fireteam Alpha</h2>
+
+    <table class="op-log">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Mode</th>
+          <th>Operatives</th>
+          <th>Duration</th>
+          <th>Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2026-04-04</td>
+          <td>Ranked</td>
+          <td>Player1, Player2, Player3</td>
+          <td>32:14</td>
+          <td class="result-w">W</td>
+        </tr>
+        <tr>
+          <td>2026-04-04</td>
+          <td>ARAM</td>
+          <td>Player1, Player4</td>
+          <td>18:42</td>
+          <td class="result-l">L</td>
+        </tr>
+        <tr>
+          <td>2026-04-03</td>
+          <td>Ranked</td>
+          <td>Player2, Player3</td>
+          <td>28:55</td>
+          <td class="result-w">W</td>
+        </tr>
+        <tr>
+          <td>2026-04-03</td>
+          <td>Normal</td>
+          <td>Player1, Player2, Player3, Player4</td>
+          <td>35:20</td>
+          <td class="result-w">W</td>
+        </tr>
+        <tr>
+          <td>2026-04-02</td>
+          <td>Ranked</td>
+          <td>Player1, Player3</td>
+          <td>41:07</td>
+          <td class="result-l">L</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ============================================ -->
+  <!-- SECTION: ENLIST (REGISTRATION)               -->
+  <!-- ============================================ -->
+  <div id="enlist" class="section">
+    <div class="page-label">Registration Form</div>
+
+    <div class="section-number">Section IV</div>
+    <h2>Enlistment</h2>
+
+    <p style="margin-bottom: 20px;">Complete all fields. Riot ID is required for match data retrieval.</p>
+
+    <div class="form-group">
+      <label>Email Address</label>
+      <input type="email" placeholder="operative@example.com">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" placeholder="">
+    </div>
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px;">
+      <div class="form-group">
+        <label>Riot Game Name</label>
+        <input type="text" placeholder="GameName">
+      </div>
+      <div class="form-group">
+        <label>Tag Line</label>
+        <input type="text" placeholder="NA1">
+      </div>
+    </div>
+
+    <button class="btn" style="margin-top: 8px;">Submit Enlistment</button>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- FOOTER                                       -->
+  <!-- ============================================ -->
+  <div class="distribution">
+    Distribution: Registered operatives only. Unauthorized access is prohibited.
+  </div>
+
+  <footer class="doc-footer">
+    LEGION // Group Performance Tracking System // Document 2026-0001
+  </footer>
+
+</div>
+
+</body>
+</html>

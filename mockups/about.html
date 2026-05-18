@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LEGION — About</title>
+  <link rel="stylesheet" href="dossier.css" />
+  <style>
+    body { display: flex; flex-direction: column; }
+
+    /* ── HERO ── */
+    .about-hero {
+      max-width: 1040px; margin: 0 auto;
+      padding: 80px 24px 56px;
+      display: grid; grid-template-columns: 200px 1fr;
+      gap: 56px;
+      border-bottom: 1px solid var(--border);
+    }
+    /* doc-stamp — inert metadata, not interactive. Renders as a flat
+       label/value column; left-rule + dashed inter-row separators read
+       as static folder markings. */
+    .doc-stamp {
+      padding-top: 14px;
+      border-left: 2px solid var(--text);
+      padding-left: 16px;
+      cursor: default;
+    }
+    .doc-stamp .stamp-block {
+      padding: 10px 0;
+      font-family: var(--font-mono);
+      font-size: 9.5px; letter-spacing: 2px;
+      color: var(--muted);
+      line-height: 1.5;
+      font-weight: 600;
+      border-bottom: 1px dashed var(--border);
+    }
+    .doc-stamp .stamp-block:first-child { padding-top: 0; }
+    .doc-stamp .stamp-block:last-child { border-bottom: none; padding-bottom: 0; }
+    .doc-stamp .stamp-block strong {
+      color: var(--text); font-weight: 700;
+      display: block; margin-top: 3px;
+      font-size: 11.5px; letter-spacing: 1.2px;
+    }
+    /* keep .accent variant available for any future highlighted line */
+    .doc-stamp .stamp-block.accent strong { color: var(--text); }
+
+    .hero-body .eyebrow { margin-bottom: 18px; }
+    /* H1 uses the shared .title-hero scale so About reads in the same
+       typographic register as Briefing / Operation Log, not as a marketing
+       splash. Override removed; size + tracking now match site-wide. */
+    .hero-body h1 {
+      margin: 6px 0 20px;
+    }
+    .hero-body p.lead {
+      font-family: var(--font-mono);
+      font-size: 15.5px;
+      color: var(--text);
+      line-height: 1.8;
+      max-width: 640px;
+      margin-bottom: 20px;
+    }
+    .hero-body p.meta {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    /* ── SECTION WRAPPER ── */
+    .section { max-width: 1040px; margin: 0 auto; padding: 80px 24px 0; }
+    .section-header { margin-bottom: 40px; }
+    .section-header h2 {
+      font-family: var(--font-display);
+      font-size: clamp(30px, 4vw, 42px);
+      font-weight: 700;
+      letter-spacing: -1px;
+      margin-top: 10px;
+      margin-bottom: 14px;
+      line-height: 1.1;
+    }
+    .section-header p.section-lede {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--muted);
+      max-width: 560px;
+      line-height: 1.75;
+    }
+
+    /* ── INTAKE PROCEDURE LIST ── */
+    .intake-list {
+      padding: 36px 44px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+    }
+    .intake-step {
+      display: grid;
+      grid-template-columns: 44px 1fr;
+      gap: 22px;
+      padding: 22px 0;
+      border-bottom: 1px dashed var(--border);
+      align-items: baseline;
+    }
+    .intake-step:first-child { padding-top: 0; }
+    .intake-step:last-child { border-bottom: none; padding-bottom: 0; }
+    .intake-num {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--muted);
+      font-weight: 700;
+      padding-top: 4px;
+    }
+    .intake-step h3 {
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.2px;
+      margin-bottom: 8px;
+    }
+    .intake-step p {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.75;
+    }
+
+    /* ── TERMINOLOGY TABLE ── */
+    .term-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr);
+      gap: 0 56px;
+      padding: 36px 44px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .term-row {
+      display: grid;
+      grid-template-columns: 150px 14px 1fr;
+      gap: 14px;
+      padding: 16px 0;
+      border-bottom: 1px dashed var(--border);
+      align-items: baseline;
+    }
+    .term-row:nth-last-child(-n+2) { border-bottom: none; }
+    .term-label {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 1.8px;
+      color: var(--text);
+      text-transform: uppercase;
+    }
+    .term-arrow { color: var(--muted-light); font-family: var(--font-mono); font-size: 12px; }
+    .term-def {
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      color: var(--text);
+      line-height: 1.65;
+    }
+
+    /* ── CTA ── */
+    .about-cta {
+      margin-top: 80px;
+      border-top: 1px solid var(--border);
+      background: var(--bg-alt);
+      padding: 80px 24px;
+      text-align: center;
+    }
+    .about-cta .eyebrow { justify-content: center; }
+    .about-cta h3 {
+      font-family: var(--font-display);
+      font-size: clamp(30px, 3.8vw, 44px);
+      font-weight: 700;
+      letter-spacing: -1px;
+      margin-top: 14px;
+      margin-bottom: 16px;
+    }
+    .about-cta p {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--muted);
+      max-width: 500px;
+      margin: 0 auto 36px;
+      line-height: 1.8;
+    }
+    .cta-group {
+      display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;
+    }
+
+    @media (max-width: 820px) {
+      .about-hero { grid-template-columns: 1fr; gap: 28px; padding: 48px 24px 40px; }
+      .doc-stamp { display: flex; gap: 10px; flex-wrap: wrap; padding-top: 0; }
+      .doc-stamp .stamp-block { margin-bottom: 0; flex: 1; min-width: 140px; }
+      .intake-list { padding: 24px 26px; }
+      .intake-step { grid-template-columns: 36px 1fr; gap: 14px; }
+      .term-grid { grid-template-columns: 1fr; padding: 24px 26px; gap: 0; }
+      .term-row { grid-template-columns: 120px 14px 1fr; }
+      .section { padding: 56px 24px 0; }
+    }
+  </style>
+</head>
+<body class="bg-grid-page">
+
+  <header class="site-header">
+    <div class="header-left">
+      <a href="landing.html" class="logo">LEGION</a>
+      <div class="cell-switcher" id="cellSwitcher">
+        <button class="cell-switcher-trigger" type="button" aria-haspopup="true" aria-expanded="false">
+          <span>Zoo 2</span>
+          <span class="chev">&#9662;</span>
+        </button>
+        <div class="cell-switcher-dropdown" role="menu">
+          <div class="cs-section-label">Active Case File</div>
+          <a class="cs-cell-row active" href="briefing.html">
+            <div class="cs-cell-name">Zoo 2 <span class="cs-cell-check">&#10003;</span></div>
+            <div class="cs-cell-meta">LGN-<span class="redacted-inline" style="height:8px; width:32px;"></span> &nbsp;&middot;&nbsp; 7 OPERATORS</div>
+          </a>
+          <div class="cs-section-label">Other Files</div>
+          <a class="cs-cell-row" href="#">
+            <div class="cs-cell-name">Shadow Company</div>
+            <div class="cs-cell-meta">LGN-<span class="redacted-inline" style="height:8px; width:32px;"></span> &nbsp;&middot;&nbsp; 5 OPERATORS</div>
+          </a>
+          <a class="cs-cell-row" href="#">
+            <div class="cs-cell-name">Iron Lattice</div>
+            <div class="cs-cell-meta">LGN-<span class="redacted-inline" style="height:8px; width:32px;"></span> &nbsp;&middot;&nbsp; 3 OPERATORS</div>
+          </a>
+          <div class="cs-divider"></div>
+          <a class="cs-action-row" href="intake.html">
+            <span class="cs-plus">+</span><span>Open New File</span>
+          </a>
+          <a class="cs-action-row" href="#">
+            <span class="cs-plus">&#9776;</span><span>Manage All Files</span>
+          </a>
+        </div>
+      </div>
+      <nav>
+        <a href="briefing.html">Briefing</a>
+        <a href="match-history.html">Operation Log</a>
+        <a href="about.html" class="active">About</a>
+      </nav>
+    </div>
+    <div class="header-right">
+      <a href="authenticate.html" class="header-cta">Authenticate</a>
+    </div>
+  </header>
+
+  <section class="about-hero">
+    <div class="doc-stamp">
+      <div class="stamp-block">
+        DOCUMENT<br>
+        <strong>LGN-ABOUT-001</strong>
+      </div>
+      <div class="stamp-block accent">
+        STATUS<br>
+        <strong>PUBLIC RELEASE</strong>
+      </div>
+      <div class="stamp-block">
+        INITIATIVE<br>
+        <strong>LEGION</strong>
+      </div>
+    </div>
+    <div class="hero-body">
+      <div class="eyebrow eyebrow-green"><span class="live-dot"></span> BRIEFING &middot; DECLASSIFIED FOR PUBLIC RELEASE &middot; AUTHORITY <span class="redacted-inline" style="height:9px; width:34px; vertical-align:middle;"></span></div>
+      <h1 class="title-hero">About LEGION</h1>
+      <p class="lead">
+        LEGION operates under ZOO directive <span class="redacted-inline" style="height:13px; width:54px;"></span>. Files are maintained on cells of two or more cooperating operators conducting joint deployments. Engagements are logged, indexed, and assessed against <span class="redacted-inline" style="height:13px; width:78px;"></span> baselines.
+      </p>
+      <p class="lead">
+        Solo activity falls outside operational scope; that signal is well-served by adjacent agencies. Subjects volunteering cell membership for surveillance are processed through standard intake. Petitioning instructions follow.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-header">
+      <div class="eyebrow">&bull; INTAKE PROCEDURE</div>
+      <h2>How to open a file.</h2>
+      <p class="section-lede">
+        Four stages from petition to first briefing. Each stage appends data to the cell's case file.
+      </p>
+    </div>
+    <div class="intake-list">
+      <div class="intake-step">
+        <div class="intake-num">01</div>
+        <div>
+          <h3>Open the new file</h3>
+          <p>Submit the intake form. An account is provisioned and a case file is opened on the cell. The case is indexed by file number and tagged for monitoring.</p>
+        </div>
+      </div>
+      <div class="intake-step">
+        <div class="intake-num">02</div>
+        <div>
+          <h3>Link a Riot account</h3>
+          <p>One Riot ID is bound to the file at intake. The corresponding PUUID is recorded and cross-referenced against match logs at each subsequent poll. Linkage is verified before the file is sealed.</p>
+        </div>
+      </div>
+      <div class="intake-step">
+        <div class="intake-num">03</div>
+        <div>
+          <h3>Designate the cell</h3>
+          <p>Name the cell. Up to 10 operators may be associated with a single file. Each additional operator is appended via invite code or by Riot ID; appended operators are tagged for monitoring on a rolling basis.</p>
+        </div>
+      </div>
+      <div class="intake-step">
+        <div class="intake-num">04</div>
+        <div>
+          <h3>Deploy</h3>
+          <p>Queue together. LEGION compiles intelligence on joint deployments only. The first briefing is filed after the next match in which two or more cell operators are deployed on the same team. Briefings refresh as new matches are logged.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-header">
+      <div class="eyebrow">&bull; TERMINOLOGY</div>
+      <h2>Glossary of field terms.</h2>
+      <p class="section-lede">
+        LEGION uses intelligence-community vocabulary throughout the interface. Translate as needed.
+      </p>
+    </div>
+    <div class="term-grid">
+      <div class="term-row">
+        <div class="term-label">CELL</div>
+        <div class="term-arrow">&rarr;</div>
+        <div class="term-def">A registered group of up to 10 cooperating operators.</div>
+      </div>
+      <div class="term-row">
+        <div class="term-label">OPERATOR</div>
+        <div class="term-arrow">&rarr;</div>
+        <div class="term-def">A single player linked to a cell via Riot ID.</div>
+      </div>
+      <div class="term-row">
+        <div class="term-label">OPEN NEW FILE</div>
+        <div class="term-arrow">&rarr;</div>
+        <div class="term-def">Submit a cell to LEGION for surveillance. Triggers case-file creation.</div>
+      </div>
+      <div class="term-row">
+        <div class="term-label">AUTHENTICATE</div>
+        <div class="term-arrow">&rarr;</div>
+        <div class="term-def">Sign in to an existing operator account.</div>
+      </div>
+      <div class="term-row">
+        <div class="term-label">BRIEFING</div>
+        <div class="term-arrow">&rarr;</div>
+        <div class="term-def">The cell's primary surveillance summary. Updated as new matches are filed.</div>
+      </div>
+      <div class="term-row">
+        <div class="term-label">OPERATION LOG</div>
+        <div class="term-arrow">&rarr;</div>
+        <div class="term-def">Match history filtered to joint deployments. Solo matches are out of scope.</div>
+      </div>
+      <div class="term-row">
+        <div class="term-label">JOINT DEPLOYMENT</div>
+        <div class="term-arrow">&rarr;</div>
+        <div class="term-def">A match in which two or more cell operators were on the same team.</div>
+      </div>
+      <div class="term-row">
+        <div class="term-label">TILT INDEX</div>
+        <div class="term-arrow">&rarr;</div>
+        <div class="term-def">Composite metric tracking post-loss cohesion decay across consecutive-loss sequences.</div>
+      </div>
+      <div class="term-row">
+        <div class="term-label">ZOO</div>
+        <div class="term-arrow">&rarr;</div>
+        <div class="term-def"><span class="redacted-inline" style="height:13px; width:62px;"></span>. Parent agency. LEGION operates as one of several initiatives under its directive.</div>
+      </div>
+      <div class="term-row">
+        <div class="term-label"><span class="redacted-inline" style="height:13px; width:88px;"></span></div>
+        <div class="term-arrow">&rarr;</div>
+        <div class="term-def"><span class="redacted-inline" style="height:13px; width:62px;"></span> <span class="redacted-inline" style="height:13px; width:142px;"></span>. <span class="redacted-inline" style="height:13px; width:74px;"></span> following <span class="redacted-inline" style="height:13px; width:54px;"></span> protocol.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="about-cta">
+    <div class="eyebrow eyebrow-green">&bull; INTAKE OPEN</div>
+    <h3>Open a new file on your cell.</h3>
+    <p>Submit the cell to LEGION for surveillance. Link one Riot ID, designate the cell, append additional operators. The first briefing is filed after the next joint deployment.</p>
+    <div class="cta-group">
+      <a href="authenticate.html" class="btn btn-accent">Open New File</a>
+      <a href="landing.html" class="btn btn-secondary">Return to Home</a>
+    </div>
+  </section>
+
+  <footer class="site-footer">DOCUMENT REF: LGN-2026-ABOUT-<span class="redacted-inline" style="height:8px; width:24px;"></span> &nbsp;//&nbsp; ORIGINATING OFFICE: LEGION/ANALYSIS &nbsp;//&nbsp; OVERSIGHT: <span class="redacted-inline" style="height:8px; width:38px;"></span> &nbsp;//&nbsp; CLEARED FOR EXTERNAL DISTRIBUTION</footer>
+
+  <script>
+    /* CELL SWITCHER toggle — click to open, click-outside or Escape to close */
+    (() => {
+      const switcher = document.getElementById('cellSwitcher');
+      if (!switcher) return;
+      const trigger = switcher.querySelector('.cell-switcher-trigger');
+      const setOpen = (open) => {
+        switcher.classList.toggle('open', open);
+        trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+      };
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        setOpen(!switcher.classList.contains('open'));
+      });
+      document.addEventListener('click', (e) => {
+        if (!switcher.contains(e.target)) setOpen(false);
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') setOpen(false);
+      });
+    })();
+  </script>
+
+</body>
+</html>

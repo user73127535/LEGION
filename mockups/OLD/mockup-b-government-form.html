@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LEGION — Mockup B: Government Form</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@300;400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #e8e4dc;
+    color: #111;
+    font-family: 'IBM Plex Mono', 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  .page {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 40px;
+  }
+
+  /* ---- FORM HEADER BAR ---- */
+  .form-header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: start;
+    border: 2px solid #111;
+    padding: 16px 20px;
+    margin-bottom: 0;
+  }
+
+  .form-header h1 {
+    font-family: 'Courier Prime', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 8px;
+  }
+
+  .form-header .form-id {
+    text-align: right;
+    font-size: 10px;
+    line-height: 1.8;
+    color: #555;
+  }
+
+  /* ---- TOP NAV BAR ---- */
+  .nav-bar {
+    display: flex;
+    border: 2px solid #111;
+    border-top: none;
+    margin-bottom: 24px;
+  }
+
+  .nav-bar a {
+    flex: 1;
+    text-align: center;
+    padding: 8px;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: #111;
+    border-right: 1px solid #999;
+    font-weight: 500;
+  }
+
+  .nav-bar a:last-child { border-right: none; }
+
+  .nav-bar a:hover { background: #ddd8cf; }
+
+  .nav-bar a.active {
+    background: #111;
+    color: #e8e4dc;
+    font-weight: 600;
+  }
+
+  /* ---- FORM BOX ---- */
+  .form-box {
+    border: 2px solid #111;
+    margin-bottom: 20px;
+  }
+
+  .form-box-title {
+    background: #111;
+    color: #e8e4dc;
+    padding: 6px 16px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .form-box-body {
+    padding: 16px;
+  }
+
+  /* ---- GRID FIELDS ---- */
+  .field-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+  }
+
+  .field-grid .field {
+    border: 1px solid #999;
+    padding: 8px 12px;
+    margin: -0.5px; /* overlap borders */
+  }
+
+  .field-grid-3 {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  .field-grid-4 {
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+  }
+
+  .field .field-label {
+    font-size: 8px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #666;
+    margin-bottom: 2px;
+    font-weight: 500;
+  }
+
+  .field .field-value {
+    font-family: 'Courier Prime', monospace;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .field .field-value.small {
+    font-size: 13px;
+  }
+
+  .field .field-note {
+    font-size: 9px;
+    color: #888;
+    margin-top: 2px;
+  }
+
+  .field-full {
+    grid-column: 1 / -1;
+  }
+
+  /* ---- TABLE INSIDE FORMS ---- */
+  .form-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+  }
+
+  .form-table th {
+    text-align: left;
+    font-size: 8px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 6px 10px;
+    border-bottom: 2px solid #111;
+    color: #555;
+    font-weight: 600;
+    background: #ddd8cf;
+  }
+
+  .form-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #ccc;
+  }
+
+  .form-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .form-table .mono {
+    font-family: 'Courier Prime', monospace;
+    font-weight: 700;
+  }
+
+  /* ---- EMPTY/PLACEHOLDER ---- */
+  .empty-block {
+    padding: 24px;
+    text-align: center;
+    color: #999;
+    font-size: 11px;
+    letter-spacing: 1px;
+    border: 1px dashed #bbb;
+    margin: 12px 0;
+  }
+
+  /* ---- INPUT FIELDS ---- */
+  .input-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    margin-bottom: 0;
+  }
+
+  .input-field {
+    border: 1px solid #999;
+    padding: 10px 12px;
+    margin: -0.5px;
+  }
+
+  .input-field label {
+    display: block;
+    font-size: 8px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #666;
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+
+  .input-field input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid #111;
+    font-family: 'Courier Prime', monospace;
+    font-size: 14px;
+    padding: 4px 0;
+    color: #111;
+    outline: none;
+  }
+
+  .input-field-full {
+    grid-column: 1 / -1;
+  }
+
+  /* ---- BUTTONS ---- */
+  .btn {
+    display: inline-block;
+    background: #111;
+    color: #e8e4dc;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 10px 24px;
+    border: 2px solid #111;
+    cursor: pointer;
+  }
+
+  .btn:hover { background: #333; }
+
+  .btn-ghost {
+    background: transparent;
+    color: #111;
+  }
+
+  .btn-ghost:hover {
+    background: #111;
+    color: #e8e4dc;
+  }
+
+  /* ---- CHECKBOX INDICATOR ---- */
+  .check-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 4px 0;
+    font-size: 11px;
+  }
+
+  .check-box {
+    width: 12px;
+    height: 12px;
+    border: 1.5px solid #111;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    flex-shrink: 0;
+  }
+
+  .check-box.checked::after {
+    content: 'X';
+    font-weight: 700;
+  }
+
+  /* ---- FOOTER ---- */
+  .form-footer {
+    border: 2px solid #111;
+    padding: 10px 16px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    color: #888;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-top: 24px;
+  }
+
+  /* ---- PAGE DIVIDER LABEL ---- */
+  .page-divider {
+    text-align: center;
+    padding: 20px 0;
+    font-size: 9px;
+    letter-spacing: 4px;
+    color: #aaa;
+    text-transform: uppercase;
+  }
+
+  @media (max-width: 600px) {
+    .page { padding: 20px 16px; }
+    .field-grid, .field-grid-3, .field-grid-4, .input-row { grid-template-columns: 1fr; }
+    .field-grid .field, .input-field { margin: -0.5px 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ============================================ -->
+  <!-- HEADER                                       -->
+  <!-- ============================================ -->
+  <div class="form-header">
+    <div>
+      <h1>LEGION</h1>
+      <div style="font-size: 10px; color: #555; letter-spacing: 2px; margin-top: 2px;">GROUP PERFORMANCE TRACKING SYSTEM</div>
+    </div>
+    <div class="form-id">
+      FORM LGNA-001<br>
+      REV. 2026-04<br>
+      PAGE 1 OF 1
+    </div>
+  </div>
+
+  <div class="nav-bar">
+    <a href="#landing" class="active">Index</a>
+    <a href="#briefing">Briefing</a>
+    <a href="#report">Field Report</a>
+    <a href="#log">Op. Log</a>
+    <a href="#enlist">Enlist</a>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- LANDING                                      -->
+  <!-- ============================================ -->
+  <div id="landing">
+    <div class="form-box">
+      <div class="form-box-title">1. System Description</div>
+      <div class="form-box-body">
+        <p style="margin-bottom: 12px;">
+          LEGION tracks the joint performance of groups (cells) in League of Legends. All metrics are derived exclusively from games where two or more registered cell members participated. Individual performance is outside the scope of this system.
+        </p>
+        <div class="field-grid field-grid-3" style="margin-top: 16px;">
+          <div class="field">
+            <div class="field-label">Output A</div>
+            <div class="field-value small">Briefing</div>
+            <div class="field-note">Cell overview and membership</div>
+          </div>
+          <div class="field">
+            <div class="field-label">Output B</div>
+            <div class="field-value small">Field Report</div>
+            <div class="field-note">Stats, synergies, mode breakdown</div>
+          </div>
+          <div class="field">
+            <div class="field-label">Output C</div>
+            <div class="field-value small">Operation Log</div>
+            <div class="field-note">Chronological match record</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 8px; margin-bottom: 20px;">
+      <button class="btn">Enlist</button>
+      <button class="btn btn-ghost">Authenticate</button>
+    </div>
+  </div>
+
+  <div class="page-divider">--- section break ---</div>
+
+  <!-- ============================================ -->
+  <!-- BRIEFING                                     -->
+  <!-- ============================================ -->
+  <div id="briefing">
+    <div class="form-box">
+      <div class="form-box-title">2. Cell Briefing</div>
+      <div class="form-box-body">
+        <div class="field-grid" style="margin-bottom: 16px;">
+          <div class="field">
+            <div class="field-label">Operative</div>
+            <div class="field-value small">jjlee@example.com</div>
+          </div>
+          <div class="field">
+            <div class="field-label">Status</div>
+            <div class="field-value small">Authenticated</div>
+          </div>
+        </div>
+
+        <div style="font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #666; margin-bottom: 8px; font-weight: 500;">Registered Cells</div>
+
+        <table class="form-table">
+          <thead>
+            <tr>
+              <th>Designation</th>
+              <th>Members</th>
+              <th>Est.</th>
+              <th>Last Active</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="mono">FIRETEAM ALPHA</td>
+              <td>4</td>
+              <td>2026-02-14</td>
+              <td>2026-04-04</td>
+            </tr>
+            <tr>
+              <td class="mono">TUESDAY GROUP</td>
+              <td>3</td>
+              <td>2026-03-01</td>
+              <td>2026-04-03</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <button class="btn" style="margin-top: 16px;">+ Register New Cell</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-divider">--- section break ---</div>
+
+  <!-- ============================================ -->
+  <!-- FIELD REPORT                                 -->
+  <!-- ============================================ -->
+  <div id="report">
+    <div class="form-box">
+      <div class="form-box-title">3. Field Report: Fireteam Alpha</div>
+      <div class="form-box-body">
+
+        <div class="field-grid" style="margin-bottom: 0;">
+          <div class="field">
+            <div class="field-label">Cell Designation</div>
+            <div class="field-value small">FIRETEAM ALPHA</div>
+          </div>
+          <div class="field">
+            <div class="field-label">Reporting Period</div>
+            <div class="field-value small">2026-02-14 — 2026-04-05</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-box">
+      <div class="form-box-title">3A. Performance Summary</div>
+      <div class="form-box-body">
+        <div class="field-grid field-grid-4">
+          <div class="field" style="text-align: center;">
+            <div class="field-label">Win Rate (Together)</div>
+            <div class="field-value">58.3%</div>
+            <div class="field-note">48 joint games</div>
+          </div>
+          <div class="field" style="text-align: center;">
+            <div class="field-label">Win Rate (Apart)</div>
+            <div class="field-value">46.1%</div>
+            <div class="field-note">individual avg.</div>
+          </div>
+          <div class="field" style="text-align: center;">
+            <div class="field-label">Total Operations</div>
+            <div class="field-value">48</div>
+            <div class="field-note">since est.</div>
+          </div>
+          <div class="field" style="text-align: center;">
+            <div class="field-label">Active Members</div>
+            <div class="field-value">4/4</div>
+            <div class="field-note">all reporting</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-box">
+      <div class="form-box-title">3B. Champion Synergy</div>
+      <div class="form-box-body">
+        <table class="form-table">
+          <thead>
+            <tr>
+              <th>Operatives</th>
+              <th>Champions</th>
+              <th>Games</th>
+              <th>Win %</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Player1, Player2</td>
+              <td class="mono">Leona / Jinx</td>
+              <td class="mono">12</td>
+              <td class="mono">75.0%</td>
+            </tr>
+            <tr>
+              <td>Player3, Player1</td>
+              <td class="mono">Nautilus / Kai'Sa</td>
+              <td class="mono">8</td>
+              <td class="mono">62.5%</td>
+            </tr>
+            <tr>
+              <td>Player2, Player4</td>
+              <td class="mono">Thresh / Ezreal</td>
+              <td class="mono">6</td>
+              <td class="mono">33.3%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="form-box">
+      <div class="form-box-title">3C. Mode Breakdown</div>
+      <div class="form-box-body">
+        <div class="field-grid field-grid-3">
+          <div class="field" style="text-align: center;">
+            <div class="field-label">Ranked</div>
+            <div class="field-value">63.6%</div>
+            <div class="field-note">22 games</div>
+          </div>
+          <div class="field" style="text-align: center;">
+            <div class="field-label">Normal</div>
+            <div class="field-value">50.0%</div>
+            <div class="field-note">14 games</div>
+          </div>
+          <div class="field" style="text-align: center;">
+            <div class="field-label">ARAM</div>
+            <div class="field-value">58.3%</div>
+            <div class="field-note">12 games</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-divider">--- section break ---</div>
+
+  <!-- ============================================ -->
+  <!-- OPERATION LOG                                -->
+  <!-- ============================================ -->
+  <div id="log">
+    <div class="form-box">
+      <div class="form-box-title">4. Operation Log: Fireteam Alpha</div>
+      <div class="form-box-body">
+        <table class="form-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Mode</th>
+              <th>Participants</th>
+              <th>Duration</th>
+              <th>Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>2026-04-04</td>
+              <td>Ranked</td>
+              <td>Player1, Player2, Player3</td>
+              <td class="mono">32:14</td>
+              <td class="mono">W</td>
+            </tr>
+            <tr>
+              <td>2026-04-04</td>
+              <td>ARAM</td>
+              <td>Player1, Player4</td>
+              <td class="mono">18:42</td>
+              <td class="mono">L</td>
+            </tr>
+            <tr>
+              <td>2026-04-03</td>
+              <td>Ranked</td>
+              <td>Player2, Player3</td>
+              <td class="mono">28:55</td>
+              <td class="mono">W</td>
+            </tr>
+            <tr>
+              <td>2026-04-03</td>
+              <td>Normal</td>
+              <td>All (4)</td>
+              <td class="mono">35:20</td>
+              <td class="mono">W</td>
+            </tr>
+            <tr>
+              <td>2026-04-02</td>
+              <td>Ranked</td>
+              <td>Player1, Player3</td>
+              <td class="mono">41:07</td>
+              <td class="mono">L</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-divider">--- section break ---</div>
+
+  <!-- ============================================ -->
+  <!-- ENLIST                                       -->
+  <!-- ============================================ -->
+  <div id="enlist">
+    <div class="form-box">
+      <div class="form-box-title">5. Enlistment Form</div>
+      <div class="form-box-body">
+        <p style="margin-bottom: 16px; font-size: 11px;">Complete all fields. A valid Riot ID is required for match data retrieval.</p>
+
+        <div class="input-row">
+          <div class="input-field input-field-full">
+            <label>Email Address</label>
+            <input type="email" placeholder="operative@example.com">
+          </div>
+        </div>
+        <div class="input-row">
+          <div class="input-field input-field-full">
+            <label>Password</label>
+            <input type="password" placeholder="">
+          </div>
+        </div>
+        <div class="input-row">
+          <div class="input-field">
+            <label>Riot Game Name</label>
+            <input type="text" placeholder="GameName">
+          </div>
+          <div class="input-field">
+            <label>Tag Line</label>
+            <input type="text" placeholder="NA1">
+          </div>
+        </div>
+
+        <div style="margin-top: 16px;">
+          <div class="check-row">
+            <span class="check-box checked"></span>
+            <span>I acknowledge that match data will be retrieved from Riot Games API</span>
+          </div>
+        </div>
+
+        <button class="btn" style="margin-top: 16px;">Submit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- FOOTER                                       -->
+  <!-- ============================================ -->
+  <div class="form-footer">
+    <span>LEGION // Form LGNA-001 // Rev. 2026-04</span>
+    <span>Distribution: Authorized users only</span>
+  </div>
+
+</div>
+
+</body>
+</html>
