@@ -1,6 +1,6 @@
 const express = require('express')
 const router = express.Router()
-const { supabase } = require('../db/supabase')
+const { supabase, createUserClient } = require('../db/supabase')
 const { getMatchIds, getMatch } = require('../services/riot')
 const { computeCellStats } = require('../services/stats')
 
@@ -13,6 +13,7 @@ async function requireAuth(req, res, next) {
   const { data: { user }, error } = await supabase.auth.getUser(token)
   if (error || !user) return res.status(401).json({ error: 'CLEARANCE DENIED' })
   req.user = user
+  req.supabase = createUserClient(token)
   next()
 }
 
@@ -29,9 +30,8 @@ function generateInviteCode() {
 
 // ── Helper: get cell member PUUIDs ───────────────────────────────
 
-async function getCellPuuids(cellId) {
-  // Get member user_ids first
-  const { data: memberRows } = await supabase
+async function getCellPuuids(sb, cellId) {
+  const { data: memberRows } = await sb
     .from('cell_members')
     .select('user_id')
     .eq('cell_id', cellId)
@@ -39,8 +39,7 @@ async function getCellPuuids(cellId) {
   const userIds = (memberRows ?? []).map((r) => r.user_id)
   if (userIds.length === 0) return []
 
-  // Then look up their operator records separately (no FK join needed)
-  const { data: opRows } = await supabase
+  const { data: opRows } = await sb
     .from('operators')
     .select('user_id, puuid, riot_game_name, riot_tag_line')
     .in('user_id', userIds)
@@ -54,10 +53,8 @@ async function getCellPuuids(cellId) {
 
 // ── Helper: fetch matches from DB that overlap with any of these PUUIDs ──
 
-async function getStoredMatches(puuids) {
-  // Use .overlaps() which maps to PostgreSQL's && (array overlap) operator.
-  // This returns matches where ANY cell member was a participant.
-  const { data, error } = await supabase
+async function getStoredMatches(sb, puuids) {
+  const { data, error } = await sb
     .from('matches')
     .select('match_id, match_data')
     .overlaps('participants_puuids', puuids)
@@ -76,7 +73,8 @@ async function getStoredMatches(puuids) {
 
 // GET /api/cells — list cells for authenticated user
 router.get('/', requireAuth, async (req, res) => {
-  const { data, error } = await supabase
+  const sb = req.supabase
+  const { data, error } = await sb
     .from('cell_members')
     .select('cell_id, cells(id, name, invite_code, created_at, created_by)')
     .eq('user_id', req.user.id)
@@ -86,7 +84,7 @@ router.get('/', requireAuth, async (req, res) => {
   const cells = await Promise.all(
     (data ?? []).map(async (row) => {
       const cell = row.cells
-      const { count } = await supabase
+      const { count } = await sb
         .from('cell_members')
         .select('*', { count: 'exact', head: true })
         .eq('cell_id', cell.id)
@@ -99,12 +97,13 @@ router.get('/', requireAuth, async (req, res) => {
 
 // POST /api/cells — create a new cell
 router.post('/', requireAuth, async (req, res) => {
+  const sb = req.supabase
   const { name } = req.body
   if (!name) return res.status(400).json({ error: 'CELL DESIGNATION REQUIRED' })
 
   const invite_code = generateInviteCode()
 
-  const { data: cell, error: cellError } = await supabase
+  const { data: cell, error: cellError } = await sb
     .from('cells')
     .insert({ name, created_by: req.user.id, invite_code })
     .select()
@@ -113,7 +112,7 @@ router.post('/', requireAuth, async (req, res) => {
   if (cellError) return res.status(500).json({ error: cellError.message })
 
   // Auto-add creator as member
-  await supabase
+  await sb
     .from('cell_members')
     .insert({ cell_id: cell.id, user_id: req.user.id })
 
@@ -122,7 +121,8 @@ router.post('/', requireAuth, async (req, res) => {
 
 // GET /api/cells/:id — get cell with members
 router.get('/:id', requireAuth, async (req, res) => {
-  const { data: cell, error } = await supabase
+  const sb = req.supabase
+  const { data: cell, error } = await sb
     .from('cells')
     .select('id, name, created_at')
     .eq('id', req.params.id)
@@ -130,7 +130,7 @@ router.get('/:id', requireAuth, async (req, res) => {
 
   if (error) return res.status(404).json({ error: 'CELL NOT FOUND' })
 
-  const { data: memberRows } = await supabase
+  const { data: memberRows } = await sb
     .from('cell_members')
     .select('user_id')
     .eq('cell_id', req.params.id)
@@ -138,7 +138,7 @@ router.get('/:id', requireAuth, async (req, res) => {
   const userIds = (memberRows ?? []).map((r) => r.user_id)
 
   const { data: opRows } = userIds.length > 0
-    ? await supabase.from('operators').select('user_id, riot_game_name, riot_tag_line, puuid, is_verified').in('user_id', userIds)
+    ? await sb.from('operators').select('user_id, riot_game_name, riot_tag_line, puuid, is_verified').in('user_id', userIds)
     : { data: [] }
 
   const members = (memberRows ?? []).map((row) => {
@@ -151,12 +151,13 @@ router.get('/:id', requireAuth, async (req, res) => {
 
 // POST /api/cells/join-by-code — look up cell by invite code and join
 router.post('/join-by-code', requireAuth, async (req, res) => {
+  const sb = req.supabase
   const { invite_code } = req.body
   if (!invite_code) return res.status(400).json({ error: 'INVITE CODE REQUIRED' })
 
   const normalized = invite_code.trim().toUpperCase()
 
-  const { data: cell, error: lookupError } = await supabase
+  const { data: cell, error: lookupError } = await sb
     .from('cells')
     .select('id, name, invite_code')
     .eq('invite_code', normalized)
@@ -166,7 +167,7 @@ router.post('/join-by-code', requireAuth, async (req, res) => {
     return res.status(404).json({ error: 'INVITE CODE INVALID OR EXPIRED' })
   }
 
-  const { data: existing } = await supabase
+  const { data: existing } = await sb
     .from('cell_members')
     .select('id')
     .eq('cell_id', cell.id)
@@ -177,7 +178,7 @@ router.post('/join-by-code', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'OPERATOR ALREADY ENLISTED IN CELL' })
   }
 
-  const { count } = await supabase
+  const { count } = await sb
     .from('cell_members')
     .select('*', { count: 'exact', head: true })
     .eq('cell_id', cell.id)
@@ -186,7 +187,7 @@ router.post('/join-by-code', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'CASE FILE AT MAXIMUM CAPACITY. 10 OPERATORS ON FILE.' })
   }
 
-  const { error } = await supabase
+  const { error } = await sb
     .from('cell_members')
     .insert({ cell_id: cell.id, user_id: req.user.id })
 
@@ -196,7 +197,8 @@ router.post('/join-by-code', requireAuth, async (req, res) => {
 
 // POST /api/cells/:id/join — join an existing cell (by ID)
 router.post('/:id/join', requireAuth, async (req, res) => {
-  const { data: existing } = await supabase
+  const sb = req.supabase
+  const { data: existing } = await sb
     .from('cell_members')
     .select('id')
     .eq('cell_id', req.params.id)
@@ -207,7 +209,7 @@ router.post('/:id/join', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'OPERATOR ALREADY ENLISTED IN CELL' })
   }
 
-  const { error } = await supabase
+  const { error } = await sb
     .from('cell_members')
     .insert({ cell_id: req.params.id, user_id: req.user.id })
 
@@ -217,7 +219,8 @@ router.post('/:id/join', requireAuth, async (req, res) => {
 
 // DELETE /api/cells/:id — dissolve a cell (handler only)
 router.delete('/:id', requireAuth, async (req, res) => {
-  const { data: cell, error: lookupError } = await supabase
+  const sb = req.supabase
+  const { data: cell, error: lookupError } = await sb
     .from('cells')
     .select('id, created_by')
     .eq('id', req.params.id)
@@ -231,8 +234,8 @@ router.delete('/:id', requireAuth, async (req, res) => {
     return res.status(403).json({ error: 'ONLY THE HANDLER MAY DISSOLVE A CELL' })
   }
 
-  await supabase.from('cell_members').delete().eq('cell_id', cell.id)
-  const { error } = await supabase.from('cells').delete().eq('id', cell.id)
+  await sb.from('cell_members').delete().eq('cell_id', cell.id)
+  const { error } = await sb.from('cells').delete().eq('id', cell.id)
 
   if (error) return res.status(500).json({ error: error.message })
   res.json({ status: 'CELL DISSOLVED' })
@@ -251,7 +254,8 @@ router.delete('/:id', requireAuth, async (req, res) => {
 // ═════════════════════════════════════════════════════════════════
 
 router.post('/:id/ingest', requireAuth, async (req, res) => {
-  const members = await getCellPuuids(req.params.id)
+  const sb = req.supabase
+  const members = await getCellPuuids(sb, req.params.id)
   const puuids = members.map((m) => m.puuid)
 
   if (puuids.length === 0) {
@@ -263,7 +267,6 @@ router.post('/:id/ingest', requireAuth, async (req, res) => {
     })
   }
 
-  // Gather all unique match IDs across all cell members
   const allMatchIds = new Set()
   for (const puuid of puuids) {
     try {
@@ -278,8 +281,7 @@ router.post('/:id/ingest', requireAuth, async (req, res) => {
     return res.json({ status: 'NO_MATCHES_FOUND', fetched: 0, skipped: 0 })
   }
 
-  // Check which matches we already have cached
-  const { data: existingRows } = await supabase
+  const { data: existingRows } = await sb
     .from('matches')
     .select('match_id')
     .in('match_id', Array.from(allMatchIds))
@@ -287,14 +289,13 @@ router.post('/:id/ingest', requireAuth, async (req, res) => {
   const existingIds = new Set((existingRows ?? []).map((r) => r.match_id))
   const newMatchIds = Array.from(allMatchIds).filter((id) => !existingIds.has(id))
 
-  // Fetch new matches one at a time (rate limiter in riot.js handles pacing)
   let fetched = 0
   for (const matchId of newMatchIds) {
     try {
       const matchData = await getMatch(matchId)
       const participantPuuids = matchData.metadata?.participants ?? []
 
-      await supabase.from('matches').upsert(
+      await sb.from('matches').upsert(
         {
           match_id: matchId,
           match_data: matchData,
@@ -325,7 +326,8 @@ router.post('/:id/ingest', requireAuth, async (req, res) => {
 // ═════════════════════════════════════════════════════════════════
 
 router.get('/:id/stats', requireAuth, async (req, res) => {
-  const members = await getCellPuuids(req.params.id)
+  const sb = req.supabase
+  const members = await getCellPuuids(sb, req.params.id)
   const puuids = members.map((m) => m.puuid)
 
   if (puuids.length === 0) {
@@ -340,13 +342,12 @@ router.get('/:id/stats', requireAuth, async (req, res) => {
     })
   }
 
-  const matchRows = await getStoredMatches(puuids)
+  const matchRows = await getStoredMatches(sb, puuids)
   const matches = matchRows.map((r) => r.match_data)
   const stats = computeCellStats(matches, puuids)
 
-  // ── Cross-cell adjacencies: other cells sharing 3+ members ──
   const userIds = members.map((m) => m.id)
-  const { data: otherMemberships } = await supabase
+  const { data: otherMemberships } = await sb
     .from('cell_members')
     .select('cell_id, user_id, cells(id, name)')
     .in('user_id', userIds)
@@ -381,12 +382,13 @@ router.get('/:id/stats', requireAuth, async (req, res) => {
 // ═════════════════════════════════════════════════════════════════
 
 router.get('/:id/operations', requireAuth, async (req, res) => {
-  const members = await getCellPuuids(req.params.id)
+  const sb = req.supabase
+  const members = await getCellPuuids(sb, req.params.id)
   const puuids = members.map((m) => m.puuid)
 
   if (puuids.length === 0) return res.json([])
 
-  const matchRows = await getStoredMatches(puuids)
+  const matchRows = await getStoredMatches(sb, puuids)
 
   const operations = []
   for (const row of matchRows) {

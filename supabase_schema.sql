@@ -26,7 +26,10 @@ drop policy if exists "cells: members can read" on cells;
 drop policy if exists "cells: authenticated can create" on cells;
 drop policy if exists "cell_members: visible to members" on cell_members;
 drop policy if exists "cell_members: self insert" on cell_members;
+drop policy if exists "cell_members: handler or self delete" on cell_members;
 drop policy if exists "matches: authenticated read" on matches;
+drop policy if exists "matches: authenticated insert" on matches;
+drop policy if exists "matches: authenticated update" on matches;
 
 -- ═══════════════════════════════════════════════════════════════
 -- STEP 2: Create tables (IF NOT EXISTS keeps them safe on re-run)
@@ -98,7 +101,27 @@ alter table cell_members enable row level security;
 alter table matches enable row level security;
 
 -- ═══════════════════════════════════════════════════════════════
--- STEP 5: Create policies (dropped in Step 1, so always fresh)
+-- STEP 5: Helper function for RLS (avoids infinite recursion)
+-- ═══════════════════════════════════════════════════════════════
+
+-- security definer runs with the function owner's privileges,
+-- bypassing RLS on cell_members so policies can check membership
+-- without triggering themselves.
+create or replace function public.is_member_of_cell(p_cell_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from cell_members
+    where cell_id = p_cell_id and user_id = auth.uid()
+  );
+$$;
+
+-- ═══════════════════════════════════════════════════════════════
+-- STEP 6: Create policies (dropped in Step 1, so always fresh)
 -- ═══════════════════════════════════════════════════════════════
 
 -- Operators: users can read/write their own record
@@ -108,7 +131,7 @@ create policy "operators: own record" on operators
 -- Cells: members can read cells they belong to
 create policy "cells: members can read" on cells
   for select using (
-    exists (select 1 from cell_members where cell_id = cells.id and user_id = auth.uid())
+    created_by = auth.uid() or public.is_member_of_cell(id)
   );
 
 -- Cells: any authenticated user can create a cell
@@ -118,17 +141,31 @@ create policy "cells: authenticated can create" on cells
 -- Cell members: visible to other members of the same cell
 create policy "cell_members: visible to members" on cell_members
   for select using (
-    user_id = auth.uid() or
-    exists (select 1 from cell_members cm where cm.cell_id = cell_members.cell_id and cm.user_id = auth.uid())
+    user_id = auth.uid() or public.is_member_of_cell(cell_id)
   );
 
 -- Cell members: users can add themselves
 create policy "cell_members: self insert" on cell_members
   for insert with check (auth.uid() = user_id);
 
+-- Cell members: handler can remove members; members can leave
+create policy "cell_members: handler or self delete" on cell_members
+  for delete using (
+    user_id = auth.uid()
+    or exists (select 1 from cells where id = cell_members.cell_id and created_by = auth.uid())
+  );
+
+-- Cells: handler can dissolve
+create policy "cells: handler can delete" on cells
+  for delete using (created_by = auth.uid());
+
 -- Matches: any authenticated user can read (game data is public)
 create policy "matches: authenticated read" on matches
   for select using (auth.uid() is not null);
 
--- Service role bypasses RLS for server-side writes
--- (no additional policy needed; service role key bypasses RLS automatically)
+-- Matches: authenticated users can cache match data
+create policy "matches: authenticated insert" on matches
+  for insert with check (auth.uid() is not null);
+
+create policy "matches: authenticated update" on matches
+  for update using (auth.uid() is not null);
