@@ -18,6 +18,10 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'OPERATIONAL', classification: 'UNCLASSIFIED' })
 })
 
-app.listen(PORT, () => {
-  console.log(`[LEGION] Server operational on port ${PORT}`)
-})
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`[LEGION] Server operational on port ${PORT}`)
+  })
+}
+
+module.exports = app
