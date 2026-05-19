@@ -13,48 +13,53 @@ async function requireAuth(req, res, next) {
 }
 
 router.post('/link', requireAuth, async (req, res) => {
-  const sb = supabase
-  const { riotGameName, riotTagLine } = req.body
-  if (!riotGameName || !riotTagLine) {
-    return res.status(400).json({ error: 'RIOT ID REQUIRED: gameName + tagLine' })
-  }
-
-  let account
   try {
-    account = await getAccountByRiotId(riotGameName, riotTagLine)
-  } catch (err) {
-    if (err.message === 'NOT_FOUND') {
-      return res.status(404).json({ error: 'OPERATOR NOT FOUND IN RIOT RECORDS' })
+    const sb = supabase
+    const { riotGameName, riotTagLine } = req.body
+    if (!riotGameName || !riotTagLine) {
+      return res.status(400).json({ error: 'RIOT ID REQUIRED: gameName + tagLine' })
     }
-    return res.status(502).json({ error: `RIOT API UNAVAILABLE: ${err.message}` })
+
+    let account
+    try {
+      account = await getAccountByRiotId(riotGameName, riotTagLine)
+    } catch (err) {
+      if (err.message === 'NOT_FOUND') {
+        return res.status(404).json({ error: 'OPERATOR NOT FOUND IN RIOT RECORDS' })
+      }
+      return res.status(502).json({ error: `RIOT API UNAVAILABLE: ${err.message}` })
+    }
+
+    const { data: existing } = await sb
+      .from('operators')
+      .select('user_id')
+      .eq('puuid', account.puuid)
+      .single()
+
+    if (existing && existing.user_id !== req.user.id) {
+      return res.status(409).json({
+        error: 'RIOT ACCOUNT ALREADY LINKED TO ANOTHER OPERATOR. EACH RIOT ID MAY ONLY BE CLAIMED ONCE.'
+      })
+    }
+
+    const { data, error } = await sb
+      .from('operators')
+      .upsert({
+        user_id: req.user.id,
+        puuid: account.puuid,
+        riot_game_name: account.gameName,
+        riot_tag_line: account.tagLine,
+        is_verified: true,
+      }, { onConflict: 'user_id' })
+      .select()
+      .single()
+
+    if (error) return res.status(500).json({ error: error.message })
+    res.json(data)
+  } catch (crash) {
+    console.error('[LEGION] operators/link CRASH:', crash)
+    res.status(500).json({ error: crash.message, stack: crash.stack })
   }
-
-  const { data: existing } = await sb
-    .from('operators')
-    .select('user_id')
-    .eq('puuid', account.puuid)
-    .single()
-
-  if (existing && existing.user_id !== req.user.id) {
-    return res.status(409).json({
-      error: 'RIOT ACCOUNT ALREADY LINKED TO ANOTHER OPERATOR. EACH RIOT ID MAY ONLY BE CLAIMED ONCE.'
-    })
-  }
-
-  const { data, error } = await sb
-    .from('operators')
-    .upsert({
-      user_id: req.user.id,
-      puuid: account.puuid,
-      riot_game_name: account.gameName,
-      riot_tag_line: account.tagLine,
-      is_verified: true,
-    }, { onConflict: 'user_id' })
-    .select()
-    .single()
-
-  if (error) return res.status(500).json({ error: error.message })
-  res.json(data)
 })
 
 router.get('/:puuid', requireAuth, async (req, res) => {
