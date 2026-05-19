@@ -308,8 +308,14 @@ router.post('/:id/ingest', requireAuth, async (req, res) => {
   const existingIds = new Set((existingRows ?? []).map((r) => r.match_id))
   const newMatchIds = Array.from(allMatchIds).filter((id) => !existingIds.has(id))
 
+  // Fetch details in batches that fit within Vercel's timeout.
+  // Each match detail = 1 Riot API call. Cap per sync to stay safe.
+  const BATCH_LIMIT = 40
+  const batch = newMatchIds.slice(0, BATCH_LIMIT)
+  const remaining = newMatchIds.length - batch.length
+
   let fetched = 0
-  for (const matchId of newMatchIds) {
+  for (const matchId of batch) {
     try {
       const matchData = await getMatch(matchId)
       const participantPuuids = matchData.metadata?.participants ?? []
@@ -330,10 +336,14 @@ router.post('/:id/ingest', requireAuth, async (req, res) => {
   }
 
   res.json({
-    status: 'INGEST_COMPLETE',
+    status: remaining > 0 ? 'INGEST_PARTIAL' : 'INGEST_COMPLETE',
     total_discovered: allMatchIds.size,
     skipped: existingIds.size,
     fetched,
+    remaining,
+    message: remaining > 0
+      ? `${remaining} matches pending. Sync again to continue filing.`
+      : undefined,
   })
 })
 

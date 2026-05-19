@@ -350,6 +350,8 @@ export default function Briefing() {
               <div className="sync-result">
                 {syncResult.status === 'ERROR'
                   ? `SYNC FAILED: ${syncResult.message}`
+                  : syncResult.remaining > 0
+                  ? `INGEST IN PROGRESS — ${syncResult.fetched ?? 0} new matches filed, ${syncResult.remaining} pending. Sync again to continue.`
                   : `INGEST COMPLETE — ${syncResult.fetched ?? 0} new matches filed, ${syncResult.skipped ?? 0} already on record`}
               </div>
             )}
