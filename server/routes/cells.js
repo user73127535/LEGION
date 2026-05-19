@@ -1,6 +1,6 @@
 const express = require('express')
 const router = express.Router()
-const { supabase, createUserClient } = require('../db/supabase')
+const { supabase } = require('../db/supabase')
 const { getMatchIds, getMatch } = require('../services/riot')
 const { computeCellStats } = require('../services/stats')
 
@@ -13,7 +13,6 @@ async function requireAuth(req, res, next) {
   const { data: { user }, error } = await supabase.auth.getUser(token)
   if (error || !user) return res.status(401).json({ error: 'CLEARANCE DENIED' })
   req.user = user
-  req.supabase = createUserClient(token)
   next()
 }
 
@@ -73,7 +72,7 @@ async function getStoredMatches(sb, puuids) {
 
 // GET /api/cells — list cells for authenticated user
 router.get('/', requireAuth, async (req, res) => {
-  const sb = req.supabase
+  const sb = supabase
   const { data, error } = await sb
     .from('cell_members')
     .select('cell_id, cells(id, name, invite_code, created_at, created_by)')
@@ -97,7 +96,7 @@ router.get('/', requireAuth, async (req, res) => {
 
 // POST /api/cells — create a new cell
 router.post('/', requireAuth, async (req, res) => {
-  const sb = req.supabase
+  const sb = supabase
   const { name } = req.body
   if (!name) return res.status(400).json({ error: 'CELL DESIGNATION REQUIRED' })
 
@@ -121,7 +120,7 @@ router.post('/', requireAuth, async (req, res) => {
 
 // GET /api/cells/:id — get cell with members
 router.get('/:id', requireAuth, async (req, res) => {
-  const sb = req.supabase
+  const sb = supabase
   const { data: cell, error } = await sb
     .from('cells')
     .select('id, name, created_at')
@@ -150,28 +149,61 @@ router.get('/:id', requireAuth, async (req, res) => {
 })
 
 // POST /api/cells/join-by-code — look up cell by invite code and join
-// Uses a security definer DB function so non-members can find the cell
+// Service role client bypasses RLS, so we query tables directly.
 router.post('/join-by-code', requireAuth, async (req, res) => {
   const { invite_code } = req.body
   if (!invite_code) return res.status(400).json({ error: 'INVITE CODE REQUIRED' })
 
-  const { data, error } = await req.supabase.rpc('join_cell_by_invite_code', {
-    code: invite_code.trim()
-  })
+  const sb = supabase
 
-  if (error) return res.status(500).json({ error: error.message })
-  if (data?.error) {
-    const status = data.error.includes('INVALID') || data.error.includes('EXPIRED') ? 404
-      : data.error.includes('ALREADY') || data.error.includes('CAPACITY') ? 400 : 500
-    return res.status(status).json({ error: data.error })
+  // Look up cell by invite code
+  const { data: cell, error: cellError } = await sb
+    .from('cells')
+    .select('id, name')
+    .eq('invite_code', invite_code.trim())
+    .single()
+
+  if (cellError || !cell) {
+    return res.status(404).json({ error: 'INVITE CODE INVALID OR EXPIRED' })
   }
 
-  res.json(data)
+  // Check if already a member
+  const { data: existing } = await sb
+    .from('cell_members')
+    .select('id')
+    .eq('cell_id', cell.id)
+    .eq('user_id', req.user.id)
+    .single()
+
+  if (existing) {
+    return res.status(400).json({ error: 'OPERATOR ALREADY ENLISTED IN CELL' })
+  }
+
+  // Check capacity (10 operators max)
+  const { count } = await sb
+    .from('cell_members')
+    .select('*', { count: 'exact', head: true })
+    .eq('cell_id', cell.id)
+
+  if (count >= 10) {
+    return res.status(400).json({ error: 'CELL AT MAXIMUM CAPACITY' })
+  }
+
+  // Add member
+  const { error: insertError } = await sb
+    .from('cell_members')
+    .insert({ cell_id: cell.id, user_id: req.user.id })
+
+  if (insertError) {
+    return res.status(500).json({ error: insertError.message })
+  }
+
+  res.json({ cell_id: cell.id, cell_name: cell.name, status: 'OPERATOR ADDED TO CELL' })
 })
 
 // POST /api/cells/:id/join — join an existing cell (by ID)
 router.post('/:id/join', requireAuth, async (req, res) => {
-  const sb = req.supabase
+  const sb = supabase
   const { data: existing } = await sb
     .from('cell_members')
     .select('id')
@@ -193,7 +225,7 @@ router.post('/:id/join', requireAuth, async (req, res) => {
 
 // DELETE /api/cells/:id — dissolve a cell (handler only)
 router.delete('/:id', requireAuth, async (req, res) => {
-  const sb = req.supabase
+  const sb = supabase
   const { data: cell, error: lookupError } = await sb
     .from('cells')
     .select('id, created_by')
@@ -228,7 +260,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
 // ═════════════════════════════════════════════════════════════════
 
 router.post('/:id/ingest', requireAuth, async (req, res) => {
-  const sb = req.supabase
+  const sb = supabase
   const members = await getCellPuuids(sb, req.params.id)
   const puuids = members.map((m) => m.puuid)
 
@@ -300,7 +332,7 @@ router.post('/:id/ingest', requireAuth, async (req, res) => {
 // ═════════════════════════════════════════════════════════════════
 
 router.get('/:id/stats', requireAuth, async (req, res) => {
-  const sb = req.supabase
+  const sb = supabase
   const members = await getCellPuuids(sb, req.params.id)
   const puuids = members.map((m) => m.puuid)
 
@@ -356,7 +388,7 @@ router.get('/:id/stats', requireAuth, async (req, res) => {
 // ═════════════════════════════════════════════════════════════════
 
 router.get('/:id/operations', requireAuth, async (req, res) => {
-  const sb = req.supabase
+  const sb = supabase
   const members = await getCellPuuids(sb, req.params.id)
   const puuids = members.map((m) => m.puuid)
 

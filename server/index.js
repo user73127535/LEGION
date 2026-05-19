@@ -18,7 +18,8 @@ app.get('/api/health', (_req, res) => {
   res.json({
     status: 'OPERATIONAL',
     classification: 'UNCLASSIFIED',
-    anon_key_loaded: !!process.env.SUPABASE_ANON_KEY,
+    service_role_loaded: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    riot_key_loaded: !!process.env.RIOT_API_KEY,
   })
 })
 
