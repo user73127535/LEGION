@@ -2127,6 +2127,38 @@ footer.site-footer {
 .match-row.loss .result-tag { background: var(--red); color: var(--bg); }
 .match-row.sealed .result-tag { background: var(--text); color: var(--bg); }
 
+/* ── Single-operator scope notice ── */
+.scope-notice {
+  padding: 40px 32px;
+  text-align: center;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  margin-top: 8px;
+}
+.scope-notice-label {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+.scope-notice-text {
+  font-family: var(--font-stat);
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text);
+  max-width: 520px;
+  margin: 0 auto 18px;
+}
+.scope-notice-ref {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--muted-light);
+}
+
 /* ── Match List ── */
 .match-list {
   background: var(--card);

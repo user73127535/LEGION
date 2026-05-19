@@ -3,6 +3,41 @@
  * All calculations focus on games where 2+ CELL members participated together.
  */
 
+// Resolve a human-readable mode name from queueId + gameMode fallback
+function resolveModeName(match) {
+  const queueId = match.info?.queueId
+  const gameMode = match.info?.gameMode
+
+  const queueMap = {
+    420: 'Ranked',
+    440: 'Ranked Flex',
+    400: 'Normal',
+    430: 'Normal',
+    450: 'ARAM',
+    930: 'ARAM Mayhem',
+    900: 'URF',
+    1020: 'One for All',
+    1300: 'Nexus Blitz',
+    1700: 'Arena',
+    1900: 'URF',
+  }
+
+  if (queueId != null && queueMap[queueId]) return queueMap[queueId]
+
+  const modeMap = {
+    CLASSIC: 'Normal',
+    ARAM: 'ARAM',
+    CHERRY: 'Arena',
+    NEXUSBLITZ: 'Nexus Blitz',
+    URF: 'URF',
+    ARURF: 'ARURF',
+    ULTBOOK: 'Ultimate Spellbook',
+    ONEFORALL: 'One for All',
+  }
+
+  return modeMap[gameMode?.toUpperCase?.()] || gameMode || 'UNKNOWN'
+}
+
 function computeCellStats(matches, cellPuuids) {
   const puuidSet = new Set(cellPuuids)
 
@@ -66,10 +101,10 @@ function computeCellStats(matches, cellPuuids) {
     .sort((a, b) => b.games - a.games)
     .slice(0, 10)
 
-  // Game mode breakdown
+  // Game mode breakdown — uses queueId for accurate classification
   const modeMap = new Map()
   for (const match of jointMatches) {
-    const mode = match.info?.gameMode ?? 'UNKNOWN'
+    const mode = resolveModeName(match)
     if (!modeMap.has(mode)) modeMap.set(mode, { games: 0, wins: 0 })
     const entry = modeMap.get(mode)
     entry.games++
@@ -178,14 +213,15 @@ function computeCellStats(matches, cellPuuids) {
     win_rate: d.games > 0 ? d.wins / d.games : 0,
   })).sort((a, b) => b.games - a.games)
 
-  // ── Activity heatmap (day-of-week x hour) ──
+  // ── Activity heatmap (day-of-week x hour) in UTC ──
   // 7 rows (0=Sunday..6=Saturday) x 24 columns (hours)
+  // Computed in UTC so the client can shift to the user's local timezone
   const heatmap = Array.from({ length: 7 }, () => Array(24).fill(0))
   for (const match of jointMatches) {
     const ts = match.info?.gameEndTimestamp ?? match.info?.gameStartTimestamp
     if (!ts) continue
     const date = new Date(ts)
-    heatmap[date.getDay()][date.getHours()]++
+    heatmap[date.getUTCDay()][date.getUTCHours()]++
   }
 
   // ── Recent form (last 10 joint games, newest first) ──

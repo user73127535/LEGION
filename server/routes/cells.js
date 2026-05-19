@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const { supabase } = require('../db/supabase')
-const { getMatchIds, getMatch } = require('../services/riot')
+const { getMatchIdsPaginated, getMatch } = require('../services/riot')
 const { computeCellStats } = require('../services/stats')
 
 // ── Auth middleware ──────────────────────────────────────────────
@@ -276,7 +276,7 @@ router.post('/:id/ingest', requireAuth, async (req, res) => {
   const allMatchIds = new Set()
   for (const puuid of puuids) {
     try {
-      const ids = await getMatchIds(puuid, 30)
+      const ids = await getMatchIdsPaginated(puuid, 200)
       ids.forEach((id) => allMatchIds.add(id))
     } catch (err) {
       console.warn(`[LEGION] Failed to get match IDs for ${puuid}: ${err.message}`)
@@ -408,6 +408,7 @@ router.get('/:id/operations', requireAuth, async (req, res) => {
     operations.push({
       match_id: row.match_id,
       game_mode: match.info?.gameMode,
+      queue_id: match.info?.queueId,
       game_duration: match.info?.gameDuration,
       game_end_timestamp: match.info?.gameEndTimestamp,
       cell_members: cellParticipants.map((p) => {

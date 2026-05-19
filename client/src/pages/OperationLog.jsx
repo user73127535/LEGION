@@ -73,18 +73,39 @@ function formatDamage(dmg) {
   return String(dmg)
 }
 
-const STAPLE_MODES = ['CLASSIC', 'ARAM', 'CHERRY', 'NEXUSBLITZ']
+const STAPLE_MODES = ['Ranked', 'Ranked Flex', 'Normal', 'ARAM', 'ARAM Mayhem', 'Arena']
 
-function modeName(raw) {
-  const map = {
-    CLASSIC: 'Ranked', ARAM: 'ARAM', CHERRY: 'Arena',
-    NEXUSBLITZ: 'Nexus Blitz', URF: 'URF', ARURF: 'ARURF',
+function resolveMode(gameMode, queueId) {
+  const queueMap = {
+    420: 'Ranked',
+    440: 'Ranked Flex',
+    400: 'Normal',
+    430: 'Normal',
+    450: 'ARAM',
+    930: 'ARAM Mayhem',
+    900: 'URF',
+    1020: 'One for All',
+    1300: 'Nexus Blitz',
+    1700: 'Arena',
+    1900: 'URF',
   }
-  return map[raw] || raw
+  if (queueId != null && queueMap[queueId]) return queueMap[queueId]
+
+  const modeMap = {
+    CLASSIC: 'Normal',
+    ARAM: 'ARAM',
+    CHERRY: 'Arena',
+    NEXUSBLITZ: 'Nexus Blitz',
+    URF: 'URF',
+    ARURF: 'ARURF',
+    ULTBOOK: 'Ultimate Spellbook',
+    ONEFORALL: 'One for All',
+  }
+  return modeMap[gameMode?.toUpperCase?.()] || gameMode || 'UNKNOWN'
 }
 
-function isRotating(raw) {
-  return !STAPLE_MODES.includes(raw)
+function isRotating(modeName) {
+  return !STAPLE_MODES.includes(modeName)
 }
 
 export default function OperationLog() {
@@ -146,7 +167,7 @@ export default function OperationLog() {
   }
 
   const filtered = (operations ?? []).filter((op) => {
-    if (filterMode !== 'All' && modeName(op.game_mode) !== filterMode) return false
+    if (filterMode !== 'All' && resolveMode(op.game_mode, op.queue_id) !== filterMode) return false
     if (filterOutcome === 'Wins' && !op.cell_members_won) return false
     if (filterOutcome === 'Losses' && op.cell_members_won) return false
     if (activeOperators !== null) {
@@ -174,7 +195,7 @@ export default function OperationLog() {
     ? Math.round(filtered.reduce((sum, o) => sum + (o.game_duration ?? 0), 0) / filtered.length)
     : null
 
-  const modes = ['All', ...new Set((operations ?? []).map((o) => modeName(o.game_mode)))]
+  const modes = ['All', ...new Set((operations ?? []).map((o) => resolveMode(o.game_mode, o.queue_id)))]
 
   const currentUserName = user?.user_metadata?.riot_game_name ?? null
 
@@ -323,7 +344,17 @@ export default function OperationLog() {
             </div>
           </div>
 
-          {hasData ? (
+          {hasData && currentOps.size === 1 ? (
+            <div className="scope-notice">
+              <div className="scope-notice-label">SINGLE OPERATOR SELECTED</div>
+              <div className="scope-notice-text">
+                Individual operator performance falls outside the scope of this surveillance program.
+                LEGION monitors joint deployments exclusively — operations involving two or more cell
+                operators on the same team. Select additional operators to review deployment history.
+              </div>
+              <div className="scope-notice-ref">Solo Reports Filed: 0</div>
+            </div>
+          ) : hasData ? (
             grouped.map((group, gi) => (
               <div key={gi}>
                 <div className="match-day-header">
@@ -338,8 +369,8 @@ export default function OperationLog() {
                       <span className="result-tag">
                         {op.cell_members_won ? 'WIN' : 'LOSS'}
                       </span>
-                      <span className={`match-mode${isRotating(op.game_mode) ? ' mode-rotating' : ''}`}>
-                        {modeName(op.game_mode)}
+                      <span className={`match-mode${isRotating(resolveMode(op.game_mode, op.queue_id)) ? ' mode-rotating' : ''}`}>
+                        {resolveMode(op.game_mode, op.queue_id)}
                       </span>
                       <span className="match-duration">{formatDuration(op.game_duration)}</span>
                       <span className="match-time">{formatTime(op.game_end_timestamp)}</span>

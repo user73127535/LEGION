@@ -72,8 +72,11 @@ function matrixCellClass(wr, games) {
 const STAPLE_MODES = ['Ranked', 'Ranked Flex', 'Normal', 'ARAM', 'ARAM Mayhem', 'Arena']
 
 function normModeName(raw) {
+  // stats.js now resolves mode names server-side using queueId,
+  // so the value is already human-readable (e.g., "Ranked", "ARAM Mayhem")
+  // This fallback handles any raw gameMode strings that slip through
   const map = {
-    CLASSIC: 'Ranked',
+    CLASSIC: 'Normal',
     RANKED: 'Ranked',
     RANKED_FLEX: 'Ranked Flex',
     ARAM: 'ARAM',
@@ -233,16 +236,34 @@ export default function Briefing() {
     return { ops, codes, n, lookup }
   }, [hasData, stats])
 
-  // Build heatmap — API returns [day][hour] counts, day 0 = Sunday
-  // We want MON first, so reorder: [1,2,3,4,5,6,0]
+  // Build heatmap — API returns UTC [day][hour] counts, day 0 = Sunday
+  // Shift to user's local timezone, then reorder to MON-first
   const heatmapData = useMemo(() => {
     if (!hasData || !stats.heatmap) return null
     const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
-    // stats.heatmap is 7 rows (days) x 24 cols (hours)
-    // assume day 0 = Sun from Riot API, reorder to Mon-first
-    const reordered = [1, 2, 3, 4, 5, 6, 0].map(i => stats.heatmap[i] || Array(24).fill(0))
+
+    // Shift UTC heatmap to local timezone
+    const offsetHours = Math.round(-new Date().getTimezoneOffset() / 60)
+    const localMap = Array.from({ length: 7 }, () => Array(24).fill(0))
+    for (let utcDay = 0; utcDay < 7; utcDay++) {
+      for (let utcHour = 0; utcHour < 24; utcHour++) {
+        const count = stats.heatmap[utcDay]?.[utcHour] || 0
+        if (count === 0) continue
+        const shifted = utcHour + offsetHours
+        const localHour = ((shifted % 24) + 24) % 24
+        const dayShift = shifted < 0 ? -1 : shifted >= 24 ? 1 : 0
+        const localDay = ((utcDay + dayShift) % 7 + 7) % 7
+        localMap[localDay][localHour] += count
+      }
+    }
+
+    // Reorder to Mon-first: [Sun=0] -> last
+    const reordered = [1, 2, 3, 4, 5, 6, 0].map(i => localMap[i])
     const max = Math.max(1, ...reordered.flat())
-    return { DAYS, rows: reordered, max }
+
+    // Timezone label
+    const tzAbbr = new Date().toLocaleTimeString('en-US', { timeZoneName: 'short' }).split(' ').pop()
+    return { DAYS, rows: reordered, max, tzAbbr }
   }, [hasData, stats])
 
   // Heatmap cell intensity class
@@ -488,7 +509,7 @@ export default function Briefing() {
                         {pct(op.win_rate)}
                       </td>
                       <td>
-                        {op.wr_without != null
+                        {isYou && op.wr_without != null
                           ? <span className="cm-num">{pct(op.wr_without)}</span>
                           : <span className="redacted redacted-w-short" />}
                       </td>
@@ -664,7 +685,7 @@ export default function Briefing() {
           {/* Activity Heatmap */}
           <div className="card vis-panel">
             <div className="panel-title">Activity Heatmap</div>
-            <div className="panel-subtitle">When the cell deploys together (last 30 days)</div>
+            <div className="panel-subtitle">When the cell deploys together{heatmapData ? ` — ${heatmapData.tzAbbr}` : ''}</div>
             <div className="panel-body">
               {heatmapData ? (
                 <>

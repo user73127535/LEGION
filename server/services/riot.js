@@ -136,9 +136,29 @@ async function getMatchIds(puuid, count = 20) {
   return riotFetch(url)
 }
 
+async function getMatchIdsPaginated(puuid, maxMatches = 200) {
+  const allIds = []
+  let start = 0
+  const batchSize = 100
+
+  while (allIds.length < maxMatches) {
+    const count = Math.min(batchSize, maxMatches - allIds.length)
+    const url = `https://${RIOT_REGION}.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids?start=${start}&count=${count}`
+    const ids = await riotFetch(url)
+
+    if (!ids || ids.length === 0) break
+    allIds.push(...ids)
+
+    if (ids.length < count) break
+    start += ids.length
+  }
+
+  return allIds
+}
+
 async function getMatch(matchId) {
   const url = `https://${RIOT_REGION}.api.riotgames.com/lol/match/v5/matches/${matchId}`
   return riotFetch(url)
 }
 
-module.exports = { getAccountByRiotId, getMatchIds, getMatch }
+module.exports = { getAccountByRiotId, getMatchIds, getMatchIdsPaginated, getMatch }
