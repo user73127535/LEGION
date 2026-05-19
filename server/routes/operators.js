@@ -1,18 +1,35 @@
 const express = require('express')
+const https = require('https')
 const router = express.Router()
 const { supabase } = require('../db/supabase')
-const { getAccountByRiotId } = require('../services/riot')
 
-// Direct Riot API lookup (bypasses rate limiter for simple single calls)
-async function lookupRiotAccount(gameName, tagLine) {
-  const region = process.env.RIOT_REGION || 'americas'
-  const url = `https://${region}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`
-  const res = await fetch(url, {
-    headers: { 'X-Riot-Token': process.env.RIOT_API_KEY },
+// Direct Riot API lookup using Node https module (fetch was failing on Vercel)
+function lookupRiotAccount(gameName, tagLine) {
+  return new Promise((resolve, reject) => {
+    const region = process.env.RIOT_REGION || 'americas'
+    const path = `/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`
+    const options = {
+      hostname: `${region}.api.riotgames.com`,
+      path,
+      method: 'GET',
+      headers: { 'X-Riot-Token': process.env.RIOT_API_KEY },
+    }
+
+    const req = https.request(options, (res) => {
+      let body = ''
+      res.on('data', (chunk) => { body += chunk })
+      res.on('end', () => {
+        if (res.statusCode === 404) return reject(new Error('NOT_FOUND'))
+        if (res.statusCode !== 200) return reject(new Error(`RIOT_API_ERROR:${res.statusCode}:${body}`))
+        try { resolve(JSON.parse(body)) }
+        catch { reject(new Error(`RIOT_PARSE_ERROR:${body.slice(0, 200)}`)) }
+      })
+    })
+
+    req.on('error', (err) => reject(new Error(`RIOT_NETWORK_ERROR:${err.message}`)))
+    req.setTimeout(8000, () => { req.destroy(); reject(new Error('RIOT_TIMEOUT')) })
+    req.end()
   })
-  if (res.status === 404) throw new Error('NOT_FOUND')
-  if (!res.ok) throw new Error(`RIOT_API_ERROR:${res.status}`)
-  return res.json()
 }
 
 async function requireAuth(req, res, next) {
