@@ -3,6 +3,18 @@ const router = express.Router()
 const { supabase } = require('../db/supabase')
 const { getAccountByRiotId } = require('../services/riot')
 
+// Direct Riot API lookup (bypasses rate limiter for simple single calls)
+async function lookupRiotAccount(gameName, tagLine) {
+  const region = process.env.RIOT_REGION || 'americas'
+  const url = `https://${region}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`
+  const res = await fetch(url, {
+    headers: { 'X-Riot-Token': process.env.RIOT_API_KEY },
+  })
+  if (res.status === 404) throw new Error('NOT_FOUND')
+  if (!res.ok) throw new Error(`RIOT_API_ERROR:${res.status}`)
+  return res.json()
+}
+
 async function requireAuth(req, res, next) {
   const token = req.headers.authorization?.replace('Bearer ', '')
   if (!token) return res.status(401).json({ error: 'AUTHENTICATION REQUIRED' })
@@ -22,7 +34,7 @@ router.post('/link', requireAuth, async (req, res) => {
 
     let account
     try {
-      account = await getAccountByRiotId(riotGameName, riotTagLine)
+      account = await lookupRiotAccount(riotGameName, riotTagLine)
     } catch (err) {
       if (err.message === 'NOT_FOUND') {
         return res.status(404).json({ error: 'OPERATOR NOT FOUND IN RIOT RECORDS' })
