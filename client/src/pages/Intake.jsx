@@ -123,7 +123,7 @@ export default function Intake() {
                   type="text"
                   placeholder="LGN-XXXX-XXXX"
                   className="invite-code-input"
-                  maxLength={12}
+                  maxLength={14}
                   value={inviteCode}
                   onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                 />
