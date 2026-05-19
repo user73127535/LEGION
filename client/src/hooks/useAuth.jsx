@@ -88,6 +88,24 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe()
   }, [fetchCells, restoreActiveCell, setActiveCell])
 
+  // Re-validate session when the tab becomes visible again (e.g. after sleep)
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.visibilityState !== 'visible') return
+      supabase.auth.getSession().then(({ data: { session: fresh } }) => {
+        if (fresh) {
+          setSession(fresh)
+        } else if (session) {
+          setSession(null)
+          setCells([])
+          setActiveCell(null)
+        }
+      })
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [session, setActiveCell])
+
   async function linkRiotIdIfNeeded(user) {
     const name = user.user_metadata?.riot_game_name
     const tag = user.user_metadata?.riot_tag_line
