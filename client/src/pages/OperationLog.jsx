@@ -349,8 +349,8 @@ export default function OperationLog() {
               <div className="scope-notice-label">SINGLE OPERATOR SELECTED</div>
               <div className="scope-notice-text">
                 Individual operator performance falls outside the scope of this surveillance program.
-                LEGION monitors joint deployments exclusively — operations involving two or more cell
-                operators on the same team. Select additional operators to review deployment history.
+                LEGION monitors joint deployments exclusively — operations involving two or more
+                operators from the same cell. Select additional operators to review deployment history.
               </div>
               <div className="scope-notice-ref">Solo Reports Filed: 0</div>
             </div>

@@ -1583,6 +1583,13 @@ footer.site-footer {
 .mode-bar.bar-neutral { background: var(--muted); }
 .mode-bar.bar-mid     { background: var(--red-mid); }
 .mode-bar.bar-low     { background: var(--red); }
+.mode-bar.mode-bar-empty {
+  width: 100%; background: none;
+  border: 1px dashed var(--border); border-radius: 5px;
+  opacity: 0.5;
+}
+.mode-row.mode-empty .mode-name,
+.mode-row.mode-empty .mode-games { opacity: 0.45; }
 /* Axis tick marks */
 .mode-scale {
   display: grid; grid-template-columns: 110px 1fr 60px 70px;

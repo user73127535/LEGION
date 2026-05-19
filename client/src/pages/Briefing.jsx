@@ -205,14 +205,19 @@ export default function Briefing() {
   const currentUserName = user?.user_metadata?.riot_game_name || user?.email?.split('@')[0] || ''
 
   // Split game modes into staple / rotating
+  // Always show all staple modes even if no data (0 games)
   const { stapleModes, rotatingModes } = useMemo(() => {
     if (!hasData || !stats.game_mode_breakdown) return { stapleModes: [], rotatingModes: [] }
-    const staple = [], rotating = []
+    const dataByName = new Map()
+    const rotating = []
     stats.game_mode_breakdown.forEach(m => {
       const name = normModeName(m.mode)
-      if (STAPLE_MODES.includes(name)) staple.push({ ...m, name })
+      if (STAPLE_MODES.includes(name)) dataByName.set(name, { ...m, name })
       else rotating.push({ ...m, name })
     })
+    const staple = STAPLE_MODES.map(name =>
+      dataByName.get(name) || { mode: name, name, games: 0, win_rate: null }
+    )
     return { stapleModes: staple, rotatingModes: rotating }
   }, [hasData, stats])
 
@@ -509,8 +514,8 @@ export default function Briefing() {
                         {pct(op.win_rate)}
                       </td>
                       <td>
-                        {isYou && op.wr_without != null
-                          ? <span className="cm-num">{pct(op.wr_without)}</span>
+                        {isYou
+                          ? <span className="cm-num">{op.wr_without != null ? pct(op.wr_without) : '—'}</span>
                           : <span className="redacted redacted-w-short" />}
                       </td>
                     </tr>
@@ -552,20 +557,25 @@ export default function Briefing() {
           <div className="mode-rows">
             {hasData ? (
               <>
-                {/* Staple modes */}
+                {/* Staple modes — always show all, even with 0 games */}
                 {stapleModes.map(m => {
-                  const wrVal = m.win_rate <= 1 ? m.win_rate * 100 : m.win_rate
+                  const hasGames = m.games > 0
+                  const wrVal = hasGames ? (m.win_rate <= 1 ? m.win_rate * 100 : m.win_rate) : 0
                   return (
-                    <div className="mode-row" key={m.mode}>
+                    <div className={`mode-row${!hasGames ? ' mode-empty' : ''}`} key={m.name}>
                       <div className="mode-name">{m.name}</div>
                       <div className="mode-bar-wrap">
-                        <div className={`mode-bar ${modeBarClass(m.win_rate)}`} style={{ width: `${wrVal}%` }} />
+                        {hasGames
+                          ? <div className={`mode-bar ${modeBarClass(m.win_rate)}`} style={{ width: `${wrVal}%` }} />
+                          : <div className="mode-bar mode-bar-empty" />}
                         <div className="mode-tick t-25" />
                         <div className="mode-tick t-50" />
                         <div className="mode-tick t-75" />
                       </div>
-                      <div className={`mode-wr ${modeWrClass(m.win_rate)}`}>{pct(m.win_rate)}</div>
-                      <div className="mode-games">{m.games} games</div>
+                      <div className={`mode-wr ${hasGames ? modeWrClass(m.win_rate) : 'wr-neutral'}`}>
+                        {hasGames ? pct(m.win_rate) : '—'}
+                      </div>
+                      <div className="mode-games">{hasGames ? `${m.games} games` : 'no data'}</div>
                     </div>
                   )
                 })}
