@@ -15,7 +15,11 @@ app.use('/api/cells', cellsRouter)
 app.use('/api/operators', operatorsRouter)
 
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'OPERATIONAL', classification: 'UNCLASSIFIED' })
+  res.json({
+    status: 'OPERATIONAL',
+    classification: 'UNCLASSIFIED',
+    anon_key_loaded: !!process.env.SUPABASE_ANON_KEY,
+  })
 })
 
 if (require.main === module) {
