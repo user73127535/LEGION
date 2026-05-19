@@ -136,14 +136,15 @@ async function getMatchIds(puuid, count = 20) {
   return riotFetch(url)
 }
 
-async function getMatchIdsPaginated(puuid, maxMatches = 200) {
+async function getMatchIdsPaginated(puuid, { maxMatches = 500, startTime } = {}) {
   const allIds = []
   let start = 0
   const batchSize = 100
 
   while (allIds.length < maxMatches) {
     const count = Math.min(batchSize, maxMatches - allIds.length)
-    const url = `https://${RIOT_REGION}.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids?start=${start}&count=${count}`
+    let url = `https://${RIOT_REGION}.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids?start=${start}&count=${count}`
+    if (startTime) url += `&startTime=${startTime}`
     const ids = await riotFetch(url)
 
     if (!ids || ids.length === 0) break

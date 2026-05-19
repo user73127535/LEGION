@@ -435,7 +435,7 @@ export default function Briefing() {
                 {hasData ? stats.games_together : <R w={60} h={28} />}
               </div>
               <div className="cm-summary-note">
-                {hasData ? 'last 30 days' : <R w={80} h={10} />}
+                {hasData ? `Season ${stats.season_year || new Date().getFullYear()}` : <R w={80} h={10} />}
               </div>
             </div>
 
@@ -541,7 +541,7 @@ export default function Briefing() {
             ════════════════════════════ */}
         <div className="card mode-panel">
           <div className="panel-title">Game Mode Breakdown</div>
-          <div className="panel-subtitle">Win rate and activity by mode (last 30 days)</div>
+          <div className="panel-subtitle">Win rate and activity by mode (current season)</div>
 
           {/* Axis tick labels */}
           <div className="mode-scale">
@@ -1090,7 +1090,7 @@ export default function Briefing() {
           <div className="card fun-card">
             <div className="fun-label">&bull; Field Assessment</div>
             <div className="fun-title">Analyst Observations</div>
-            <div className="fun-subtitle">Judgments compiled from 30-day match data</div>
+            <div className="fun-subtitle">Judgments compiled from current season match data</div>
             <div className="fun-body">
               <div className="assessment-list">
                 {hasData && stats.assessments ? (

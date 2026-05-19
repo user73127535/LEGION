@@ -50,7 +50,19 @@ async function getCellPuuids(sb, cellId) {
   return members
 }
 
+// ── Season boundary (LoL seasons start mid-January each year) ────
+
+function currentSeasonStart() {
+  const now = new Date()
+  return new Date(Date.UTC(now.getUTCFullYear(), 0, 10))
+}
+
+function currentSeasonStartEpoch() {
+  return Math.floor(currentSeasonStart().getTime() / 1000)
+}
+
 // ── Helper: fetch matches from DB that overlap with any of these PUUIDs ──
+// Filters to current season only using the match's gameStartTimestamp.
 
 async function getStoredMatches(sb, puuids) {
   const { data, error } = await sb
@@ -63,7 +75,12 @@ async function getStoredMatches(sb, puuids) {
     console.error('[LEGION] Match query error:', error.message)
     return []
   }
-  return data ?? []
+
+  const seasonStartMs = currentSeasonStart().getTime()
+  return (data ?? []).filter(row => {
+    const ts = row.match_data?.info?.gameStartTimestamp
+    return ts && ts >= seasonStartMs
+  })
 }
 
 // ═════════════════════════════════════════════════════════════════
@@ -273,10 +290,11 @@ router.post('/:id/ingest', requireAuth, async (req, res) => {
     })
   }
 
+  const seasonStart = currentSeasonStartEpoch()
   const allMatchIds = new Set()
   for (const puuid of puuids) {
     try {
-      const ids = await getMatchIdsPaginated(puuid, 200)
+      const ids = await getMatchIdsPaginated(puuid, { maxMatches: 500, startTime: seasonStart })
       ids.forEach((id) => allMatchIds.add(id))
     } catch (err) {
       console.warn(`[LEGION] Failed to get match IDs for ${puuid}: ${err.message}`)
@@ -351,6 +369,7 @@ router.get('/:id/stats', requireAuth, async (req, res) => {
   const matchRows = await getStoredMatches(sb, puuids)
   const matches = matchRows.map((r) => r.match_data)
   const stats = computeCellStats(matches, puuids)
+  stats.season_year = new Date().getUTCFullYear()
 
   const userIds = members.map((m) => m.id)
   const { data: otherMemberships } = await sb

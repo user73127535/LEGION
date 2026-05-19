@@ -251,7 +251,7 @@ export default function OperationLog() {
               {hasData ? totalWins : <R w={60} h={36} />}
             </div>
             <div className="summary-sub">
-              {hasData ? 'last 30 days' : <R w={80} h={10} />}
+              {hasData ? 'current season' : <R w={80} h={10} />}
             </div>
           </div>
           <div className="summary-card">
@@ -261,7 +261,7 @@ export default function OperationLog() {
               {hasData ? totalLosses : <R w={60} h={36} />}
             </div>
             <div className="summary-sub">
-              {hasData ? 'last 30 days' : <R w={80} h={10} />}
+              {hasData ? 'current season' : <R w={80} h={10} />}
             </div>
           </div>
           <div className="summary-card">
