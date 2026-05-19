@@ -50,15 +50,15 @@ async function getCellPuuids(sb, cellId) {
   return members
 }
 
-// ── Season boundary (LoL seasons start mid-January each year) ────
+// ── Fetch window ─────────────────────────────────────────────────
+// Pull matches from the last 12 months so pre-season games (ARAM,
+// off-season modes, etc.) are included alongside current-season data.
 
-function currentSeasonStart() {
+function fetchWindowStartEpoch() {
   const now = new Date()
-  return new Date(Date.UTC(now.getUTCFullYear(), 0, 10))
-}
-
-function currentSeasonStartEpoch() {
-  return Math.floor(currentSeasonStart().getTime() / 1000)
+  const oneYearAgo = new Date(now)
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
+  return Math.floor(oneYearAgo.getTime() / 1000)
 }
 
 // ── Helper: fetch matches from DB that overlap with any of these PUUIDs ──
@@ -285,11 +285,11 @@ router.post('/:id/ingest', requireAuth, async (req, res) => {
     })
   }
 
-  const seasonStart = currentSeasonStartEpoch()
+  const startTime = fetchWindowStartEpoch()
   const allMatchIds = new Set()
   for (const puuid of puuids) {
     try {
-      const ids = await getMatchIdsPaginated(puuid, { maxMatches: 500, startTime: seasonStart })
+      const ids = await getMatchIdsPaginated(puuid, { maxMatches: 500, startTime })
       ids.forEach((id) => allMatchIds.add(id))
     } catch (err) {
       console.warn(`[LEGION] Failed to get match IDs for ${puuid}: ${err.message}`)
