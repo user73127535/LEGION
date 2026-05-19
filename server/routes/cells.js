@@ -150,49 +150,23 @@ router.get('/:id', requireAuth, async (req, res) => {
 })
 
 // POST /api/cells/join-by-code — look up cell by invite code and join
+// Uses a security definer DB function so non-members can find the cell
 router.post('/join-by-code', requireAuth, async (req, res) => {
-  const sb = req.supabase
   const { invite_code } = req.body
   if (!invite_code) return res.status(400).json({ error: 'INVITE CODE REQUIRED' })
 
-  const normalized = invite_code.trim().toUpperCase()
-
-  const { data: cell, error: lookupError } = await sb
-    .from('cells')
-    .select('id, name, invite_code')
-    .eq('invite_code', normalized)
-    .single()
-
-  if (lookupError || !cell) {
-    return res.status(404).json({ error: 'INVITE CODE INVALID OR EXPIRED' })
-  }
-
-  const { data: existing } = await sb
-    .from('cell_members')
-    .select('id')
-    .eq('cell_id', cell.id)
-    .eq('user_id', req.user.id)
-    .single()
-
-  if (existing) {
-    return res.status(400).json({ error: 'OPERATOR ALREADY ENLISTED IN CELL' })
-  }
-
-  const { count } = await sb
-    .from('cell_members')
-    .select('*', { count: 'exact', head: true })
-    .eq('cell_id', cell.id)
-
-  if ((count ?? 0) >= 10) {
-    return res.status(400).json({ error: 'CASE FILE AT MAXIMUM CAPACITY. 10 OPERATORS ON FILE.' })
-  }
-
-  const { error } = await sb
-    .from('cell_members')
-    .insert({ cell_id: cell.id, user_id: req.user.id })
+  const { data, error } = await req.supabase.rpc('join_cell_by_invite_code', {
+    code: invite_code.trim()
+  })
 
   if (error) return res.status(500).json({ error: error.message })
-  res.json({ status: 'OPERATOR ADDED TO CELL', cell_id: cell.id, cell_name: cell.name })
+  if (data?.error) {
+    const status = data.error.includes('INVALID') || data.error.includes('EXPIRED') ? 404
+      : data.error.includes('ALREADY') || data.error.includes('CAPACITY') ? 400 : 500
+    return res.status(status).json({ error: data.error })
+  }
+
+  res.json(data)
 })
 
 // POST /api/cells/:id/join — join an existing cell (by ID)
