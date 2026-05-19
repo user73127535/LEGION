@@ -8,8 +8,7 @@ const supabase = createClient(supabaseUrl, serviceRoleKey || anonKey)
 
 function createUserClient(token) {
   return createClient(supabaseUrl, anonKey, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+    accessToken: async () => token,
   })
 }
 
