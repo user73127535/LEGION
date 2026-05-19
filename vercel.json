@@ -3,6 +3,7 @@
   "outputDirectory": "client/dist",
   "installCommand": "npm install --prefix client && npm install --prefix server",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/[...path]" }
+    { "source": "/api/(.*)", "destination": "/api/[...path]" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
