@@ -15,10 +15,19 @@ app.use('/api/cells', cellsRouter)
 app.use('/api/operators', operatorsRouter)
 
 app.get('/api/health', (_req, res) => {
+  // Decode JWT payload to check which role the key actually has
+  let keyRole = 'unknown'
+  try {
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    const payload = JSON.parse(Buffer.from(key.split('.')[1], 'base64').toString())
+    keyRole = payload.role || 'missing'
+  } catch { /* malformed key */ }
+
   res.json({
     status: 'OPERATIONAL',
     classification: 'UNCLASSIFIED',
     service_role_loaded: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    key_role: keyRole,
     riot_key_loaded: !!process.env.RIOT_API_KEY,
   })
 })
