@@ -75,12 +75,7 @@ async function getStoredMatches(sb, puuids) {
     console.error('[LEGION] Match query error:', error.message)
     return []
   }
-
-  const seasonStartMs = currentSeasonStart().getTime()
-  return (data ?? []).filter(row => {
-    const ts = row.match_data?.info?.gameStartTimestamp
-    return ts && ts >= seasonStartMs
-  })
+  return data ?? []
 }
 
 // ═════════════════════════════════════════════════════════════════
