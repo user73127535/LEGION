@@ -109,12 +109,16 @@ export function AuthProvider({ children }) {
   async function linkRiotIdIfNeeded(user) {
     const name = user.user_metadata?.riot_game_name
     const tag = user.user_metadata?.riot_tag_line
-    if (!name || !tag) return
+    if (!name || !tag) {
+      console.warn('[LEGION] No Riot ID in user metadata — skipping link')
+      return
+    }
 
     try {
       await api.linkRiotId({ riotGameName: name, riotTagLine: tag })
-    } catch {
-      // Silent — backend may not be running or Riot key not configured
+      console.log(`[LEGION] Riot ID linked: ${name}#${tag}`)
+    } catch (err) {
+      console.error(`[LEGION] Riot ID link failed for ${name}#${tag}:`, err.message)
     }
   }
 
