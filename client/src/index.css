@@ -358,12 +358,62 @@ header.site-header nav a.active {
 
 
 /* =================================================================
-   ANIMATIONS
+   ANIMATIONS — DECLASSIFICATION REVEAL SYSTEM
+   Sections slide up + fade in like classified documents being
+   presented for review. Plays once on mount; no scroll triggers.
    ================================================================= */
 
-@keyframes fade-in-up {
-  from { opacity: 0; transform: translateY(8px); }
+/* ── Base keyframes ── */
+@keyframes intel-reveal {
+  from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes data-fade {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Section-level reveal (plays once on mount) ── */
+.intel-reveal {
+  animation: intel-reveal 0.5s ease-out both;
+}
+
+/* ── Stagger delay classes for cascade ordering ── */
+.reveal-d1 { animation-delay: 0.07s; }
+.reveal-d2 { animation-delay: 0.14s; }
+.reveal-d3 { animation-delay: 0.21s; }
+.reveal-d4 { animation-delay: 0.28s; }
+.reveal-d5 { animation-delay: 0.35s; }
+.reveal-d6 { animation-delay: 0.42s; }
+.reveal-d7 { animation-delay: 0.49s; }
+.reveal-d8 { animation-delay: 0.56s; }
+
+/* ── Auto-stagger: children cascade automatically ── */
+.intel-stagger > * {
+  animation: intel-reveal 0.5s ease-out both;
+}
+.intel-stagger > :nth-child(1) { animation-delay: 0.05s; }
+.intel-stagger > :nth-child(2) { animation-delay: 0.10s; }
+.intel-stagger > :nth-child(3) { animation-delay: 0.15s; }
+.intel-stagger > :nth-child(4) { animation-delay: 0.20s; }
+.intel-stagger > :nth-child(5) { animation-delay: 0.25s; }
+.intel-stagger > :nth-child(6) { animation-delay: 0.30s; }
+
+/* ── Data-arrival fade (softer, for async content swap) ── */
+.data-reveal {
+  animation: data-fade 0.4s ease-out both;
+}
+
+/* ── Respect user motion preferences ── */
+@media (prefers-reduced-motion: reduce) {
+  .intel-reveal,
+  .intel-stagger > *,
+  .data-reveal {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }
 
 .cursor-block::after { content: ''; }

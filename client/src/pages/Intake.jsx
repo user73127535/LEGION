@@ -60,7 +60,7 @@ export default function Intake() {
   return (
     <>
       <section className="form-wrapper">
-        <form className="form-card intake-form-card" onSubmit={handleSubmit}>
+        <form className="form-card intake-form-card intel-reveal" onSubmit={handleSubmit}>
           <div className="form-card-banner">
             CONFIDENTIAL // CELL INTAKE // HANDLE WITH CARE
           </div>

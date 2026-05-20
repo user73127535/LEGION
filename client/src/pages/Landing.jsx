@@ -8,7 +8,7 @@ function R({ w, h = 8 }) {
 export default function Landing() {
   return (
     <div className="landing-body">
-      <section className="hero">
+      <section className="hero intel-stagger">
         <h1>LEGION</h1>
         <p className="tagline">Surveillance on cells that queue together.</p>
         <p className="tagline-sub">
@@ -25,8 +25,8 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="stats-strip">
-        <div className="stats-strip-inner">
+      <section className="stats-strip intel-reveal reveal-d3">
+        <div className="stats-strip-inner intel-stagger">
           <div className="stat-block">
             <div className="stat-block-value">2.4M</div>
             <div className="stat-block-label">Matches Filed</div>
@@ -50,7 +50,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="features">
+      <section className="features intel-reveal reveal-d5">
         <div className="features-intro">
           <div className="eyebrow eyebrow-green">&bull; FILE CONTENTS</div>
           <h2>Intelligence compiled at the cell level.</h2>
@@ -59,7 +59,7 @@ export default function Landing() {
             matches are filed under <R w={48} h={11} />.
           </p>
         </div>
-        <div className="features-grid">
+        <div className="features-grid intel-stagger">
           <div className="feature">
             <div className="feature-number">
               REPORT-01 &middot; BRIEFING &middot; <R w={36} />

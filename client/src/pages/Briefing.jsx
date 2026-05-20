@@ -400,10 +400,10 @@ export default function Briefing() {
         {/* ════════════════════════════
             CELL MEMBERS
             ════════════════════════════ */}
-        <div className="card cell-members">
+        <div className="card cell-members intel-reveal">
 
           {/* Summary strip */}
-          <div className="cm-summary">
+          <div className="cm-summary intel-stagger">
             {/* Joint WR */}
             <div className="cm-summary-cell">
               <div className="cm-summary-label">Joint WR</div>
@@ -549,7 +549,7 @@ export default function Briefing() {
         {/* ════════════════════════════
             GAME MODE BREAKDOWN
             ════════════════════════════ */}
-        <div className="card mode-panel">
+        <div className="card mode-panel intel-reveal reveal-d1">
           <div className="panel-title">Game Mode Breakdown</div>
           <div className="panel-subtitle">Win rate and activity by mode (current season)</div>
 
@@ -642,7 +642,7 @@ export default function Briefing() {
         {/* ════════════════════════════
             DUO MATRIX + HEATMAP
             ════════════════════════════ */}
-        <div className="two-col">
+        <div className="two-col intel-reveal reveal-d2">
 
           {/* Duo Win Rate Matrix */}
           <div className="card vis-panel">
@@ -651,7 +651,7 @@ export default function Briefing() {
             <div className="panel-body">
               {matrixData ? (
                 <div
-                  className="matrix-grid"
+                  className="matrix-grid data-reveal"
                   style={{
                     gridTemplateColumns: `48px repeat(${matrixData.n}, minmax(0, 1fr))`,
                     gridTemplateRows: `36px repeat(${matrixData.n}, 1fr)`,
@@ -716,7 +716,7 @@ export default function Briefing() {
             <div className="panel-subtitle">When the cell deploys together{heatmapData ? ` — ${heatmapData.tzAbbr}` : ''}</div>
             <div className="panel-body">
               {heatmapData ? (
-                <>
+                <div className="data-reveal">
                   <div className="heatmap-grid">
                     {heatmapData.DAYS.flatMap((day, di) => [
                         <div key={`day-label-${di}`} className="heatmap-day-label">{day}</div>,
@@ -740,7 +740,7 @@ export default function Briefing() {
                       </div>
                     ))}
                   </div>
-                </>
+                </div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 2, marginTop: 20 }}>
                   {Array.from({ length: 84 }).map((_, i) => (
@@ -755,7 +755,7 @@ export default function Briefing() {
         {/* ════════════════════════════
             CHAMPION POOLS
             ════════════════════════════ */}
-        <div className="card fun-card pools-card">
+        <div className="card fun-card pools-card intel-reveal reveal-d3">
           <div className="fun-label">&bull; Operator Profiles</div>
           <div className="fun-title">Champion Pools</div>
           <div className="fun-subtitle">Champion selection patterns, by subject</div>
@@ -906,7 +906,7 @@ export default function Briefing() {
         {/* ════════════════════════════
             ANALYST NOTES SECTION HEADER
             ════════════════════════════ */}
-        <div className="section-divider">
+        <div className="section-divider intel-reveal reveal-d4">
           <div className="eyebrow">&bull; ANALYST NOTES</div>
           <h2 className="section-title">Behavioral Intelligence</h2>
           <div className="section-subtitle">Performance anomalies, synergies, and deployment patterns</div>
@@ -915,7 +915,7 @@ export default function Briefing() {
         {/* ════════════════════════════
             ANALYST ROW: TILT + LINK
             ════════════════════════════ */}
-        <div className="analyst-row">
+        <div className="analyst-row intel-reveal reveal-d5">
 
           {/* TILT INDEX */}
           <div className="card fun-card">
@@ -1004,7 +1004,7 @@ export default function Briefing() {
             <div className="link-svg-wrap">
               {linkData ? (
                 <svg
-                  className="link-svg"
+                  className="link-svg data-reveal"
                   viewBox="0 40 360 340"
                   xmlns="http://www.w3.org/2000/svg"
                 >
@@ -1104,7 +1104,7 @@ export default function Briefing() {
         {/* ════════════════════════════
             FIELD ASSESSMENTS
             ════════════════════════════ */}
-        <div className="analyst-bottom">
+        <div className="analyst-bottom intel-reveal reveal-d6">
           <div className="card fun-card">
             <div className="fun-label">&bull; Field Assessment</div>
             <div className="fun-title">Analyst Observations</div>

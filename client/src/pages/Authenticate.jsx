@@ -59,7 +59,7 @@ export default function Authenticate() {
   return (
     <>
       <section className="form-wrapper">
-        <div className="form-card">
+        <div className="form-card intel-reveal">
           <div className="form-card-banner">
             CONFIDENTIAL // OPERATOR AUTHENTICATION // HANDLE WITH CARE
           </div>

@@ -235,7 +235,7 @@ export default function OperationLog() {
       <div className="page-content">
 
         {/* ── SUMMARY STRIP ── */}
-        <div className="summary-strip">
+        <div className="summary-strip intel-stagger">
           <div className="summary-card">
             <div className="summary-card-accent" style={{ background: 'var(--green)' }} />
             <div className="summary-label">Joint Win Rate</div>
@@ -279,7 +279,7 @@ export default function OperationLog() {
         </div>
 
         {/* ── FILTER BAR ── */}
-        <div className="filter-bar">
+        <div className="filter-bar intel-reveal reveal-d4">
           <div className="filter-bar-head">
             <span className="filter-bar-head-label">Filters</span>
             <button
@@ -338,7 +338,7 @@ export default function OperationLog() {
         </div>
 
         {/* ── MATCH LIST ── */}
-        <div className="match-list">
+        <div className="match-list intel-reveal reveal-d5">
           <div className="match-list-head">
             <div className="match-list-title">Deployment History</div>
             <div className="match-list-count">

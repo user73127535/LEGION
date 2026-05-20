@@ -8,7 +8,7 @@ function R({ w, h = 8 }) {
 export default function About() {
   return (
     <>
-      <section className="about-hero">
+      <section className="about-hero intel-reveal">
         <div className="doc-stamp">
           <div className="stamp-block">
             DOCUMENT<br />
@@ -44,7 +44,7 @@ export default function About() {
         </div>
       </section>
 
-      <section className="section">
+      <section className="section intel-reveal reveal-d1">
         <div className="section-header">
           <div className="eyebrow">&bull; INTAKE PROCEDURE</div>
           <h2>How to open a file.</h2>
@@ -53,7 +53,7 @@ export default function About() {
             to the cell's case file.
           </p>
         </div>
-        <div className="intake-list">
+        <div className="intake-list intel-stagger">
           <div className="intake-step">
             <div className="intake-num">01</div>
             <div>
@@ -103,7 +103,7 @@ export default function About() {
         </div>
       </section>
 
-      <section className="section">
+      <section className="section intel-reveal reveal-d3">
         <div className="section-header">
           <div className="eyebrow">&bull; TERMINOLOGY</div>
           <h2>Glossary of field terms.</h2>
@@ -172,7 +172,7 @@ export default function About() {
         </div>
       </section>
 
-      <section className="about-cta">
+      <section className="about-cta intel-reveal reveal-d4">
         <div className="eyebrow eyebrow-green">&bull; INTAKE OPEN</div>
         <h3>Open a new file on your cell.</h3>
         <p>
