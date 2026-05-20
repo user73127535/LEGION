@@ -341,6 +341,7 @@ router.post('/:id/ingest', requireAuth, async (req, res) => {
     skipped: existingIds.size,
     fetched,
     remaining,
+    fetch_window_start: new Date(startTime * 1000).toISOString(),
     message: remaining > 0
       ? `${remaining} matches pending. Sync again to continue filing.`
       : undefined,
