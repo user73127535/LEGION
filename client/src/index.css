@@ -464,6 +464,15 @@ header.site-header nav a.active {
   }
 }
 
+/* ── Keyboard focus indicator (accessibility) ── */
+:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
 .cursor-block::after { content: ''; }
 
 .live-dot,

@@ -213,27 +213,9 @@ router.post('/join-by-code', requireAuth, async (req, res) => {
   res.json({ cell_id: cell.id, cell_name: cell.name, status: 'OPERATOR ADDED TO CELL' })
 })
 
-// POST /api/cells/:id/join — join an existing cell (by ID)
-router.post('/:id/join', requireAuth, async (req, res) => {
-  const sb = supabase
-  const { data: existing } = await sb
-    .from('cell_members')
-    .select('id')
-    .eq('cell_id', req.params.id)
-    .eq('user_id', req.user.id)
-    .single()
-
-  if (existing) {
-    return res.status(400).json({ error: 'OPERATOR ALREADY ENLISTED IN CELL' })
-  }
-
-  const { error } = await sb
-    .from('cell_members')
-    .insert({ cell_id: req.params.id, user_id: req.user.id })
-
-  if (error) return res.status(500).json({ error: error.message })
-  res.json({ status: 'OPERATOR ADDED TO CELL' })
-})
+// NOTE: Direct join-by-ID route removed — all joins must go through
+// POST /api/cells/join-by-code with a valid invite code. This prevents
+// unauthorized users from joining cells by guessing UUIDs.
 
 // DELETE /api/cells/:id — dissolve a cell (handler only)
 router.delete('/:id', requireAuth, async (req, res) => {

@@ -118,21 +118,22 @@ export default function OperationLog() {
   const [filterOutcome, setFilterOutcome] = useState('All')
   const [activeOperators, setActiveOperators] = useState(null)
 
-  const hasCell = user && activeCell
+  const cellId = activeCell?.id
+  const hasCell = !!(user && activeCell)
   const hasData = operations && operations.length > 0
 
   const fetchOps = useCallback(async () => {
-    if (!activeCell) return
+    if (!cellId) return
     setLoading(true)
     try {
-      const data = await api.getOperationLog(activeCell.id)
+      const data = await api.getOperationLog(cellId)
       setOperations(data)
     } catch {
       setOperations(null)
     } finally {
       setLoading(false)
     }
-  }, [activeCell])
+  }, [cellId])
 
   useEffect(() => {
     if (hasCell) fetchOps()
@@ -174,7 +175,7 @@ export default function OperationLog() {
     if (filterOutcome === 'Losses' && op.cell_members_won) return false
     if (activeOperators !== null) {
       const opNames = op.participants.map((p) => p.name)
-      if (!opNames.every((n) => currentOps.has(n))) return false
+      if (!opNames.some((n) => currentOps.has(n))) return false
     }
     return true
   })

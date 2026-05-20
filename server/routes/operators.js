@@ -87,7 +87,7 @@ router.post('/link', requireAuth, async (req, res) => {
     res.json(data)
   } catch (crash) {
     console.error('[LEGION] operators/link CRASH:', crash)
-    res.status(500).json({ error: crash.message, stack: crash.stack })
+    res.status(500).json({ error: 'INTERNAL ERROR' })
   }
 })
 

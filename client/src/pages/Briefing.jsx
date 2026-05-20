@@ -165,21 +165,22 @@ export default function Briefing() {
   const [syncResult, setSyncResult] = useState(null)
   const [loading, setLoading] = useState(false)
 
-  const hasCell = user && activeCell
+  const cellId = activeCell?.id
+  const hasCell = !!(user && activeCell)
   const hasData = stats && stats.games_together > 0
 
   const fetchStats = useCallback(async () => {
-    if (!activeCell) return
+    if (!cellId) return
     setLoading(true)
     try {
-      const data = await api.getCellStats(activeCell.id)
+      const data = await api.getCellStats(cellId)
       setStats(data)
     } catch {
       setStats(null)
     } finally {
       setLoading(false)
     }
-  }, [activeCell])
+  }, [cellId])
 
   useEffect(() => {
     if (hasCell) fetchStats()
@@ -187,11 +188,11 @@ export default function Briefing() {
   }, [hasCell, fetchStats])
 
   async function handleSync() {
-    if (!activeCell || syncing) return
+    if (!cellId || syncing) return
     setSyncing(true)
     setSyncResult(null)
     try {
-      const result = await api.ingestMatches(activeCell.id)
+      const result = await api.ingestMatches(cellId)
       setSyncResult(result)
       await fetchStats()
     } catch (err) {
@@ -423,7 +424,7 @@ export default function Briefing() {
               <div className="cm-summary-note">
                 {hasData && wrDelta != null ? (
                   <span className={`badge ${parseFloat(wrDelta) >= 0 ? 'badge-green' : 'badge-red'}`}>
-                    {parseFloat(wrDelta) >= 0 ? '↑' : '↓'} {Math.abs(wrDelta)} pts vs. solo
+                    {parseFloat(wrDelta) >= 0 ? '↑' : '↓'} {Math.abs(wrDelta)} pts vs. without you
                   </span>
                 ) : <R w={100} h={10} />}
               </div>
@@ -498,8 +499,7 @@ export default function Briefing() {
             <tbody>
               {hasData && stats.operator_stats ? (
                 stats.operator_stats.map((op) => {
-                  const isYou = op.name?.toLowerCase().startsWith(currentUserName.toLowerCase()) ||
-                    op.puuid === user?.id
+                  const isYou = currentUserName && op.name?.toLowerCase() === currentUserName.toLowerCase()
                   const isActive = op.games >= 20
                   return (
                     <tr key={op.puuid} className={isYou ? 'cm-you' : ''}>
@@ -773,7 +773,7 @@ export default function Briefing() {
             <div className="pools-grid">
               {hasData && stats.operator_stats ? (
                 stats.operator_stats.map((op, opIdx) => {
-                  const isYou = op.name?.toLowerCase().startsWith(currentUserName.toLowerCase()) || op.puuid === user?.id
+                  const isYou = currentUserName && op.name?.toLowerCase() === currentUserName.toLowerCase()
                   const champs = op.top_champions || []
                   const totalGames = op.games || 0
                   const { label, badgeClass } = classifyPool(champs, totalGames)
