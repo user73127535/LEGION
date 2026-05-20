@@ -480,7 +480,7 @@ export default function Briefing() {
               <tr>
                 <th>OPERATOR</th>
                 <th>STATUS</th>
-                <th>GAMES (30D)</th>
+                <th>GAMES (SEASON)</th>
                 <th>WIN RATE</th>
                 <th>CELL WR WITHOUT &mdash;</th>
               </tr>
