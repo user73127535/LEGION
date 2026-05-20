@@ -1774,8 +1774,6 @@ footer.site-footer {
 }
 .legend-row { display: flex; align-items: center; gap: 9px; }
 .legend-line { width: 22px; height: 3px; }
-.legend-node { width: 10px; height: 10px; border-radius: 50%; background: var(--text); flex-shrink: 0; }
-.legend-node.node-isolated { background: var(--text); border: 2px dashed var(--border); }
 
 /* ── Field Assessments (mockup-style) ── */
 .analyst-bottom { margin-bottom: 28px; }

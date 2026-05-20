@@ -114,48 +114,62 @@ function tiltSegClass(idx, score) {
 }
 
 /* ── Link Analysis SVG ── */
+// 5-tier edge color matching Game Mode Breakdown
+function linkEdgeColor(wrPct) {
+  if (wrPct >= 62) return 'var(--green)'
+  if (wrPct > 50) return '#16a34a'
+  if (wrPct >= 40) return 'var(--red-mid)'
+  return 'var(--red)'
+}
+
 function buildLinkSVG(ops, duoStats) {
   if (!ops || ops.length < 2) return null
 
-  const ACTIVE_THRESHOLD = 20
+  const ACTIVE_THRESHOLD = 5
   const active = ops.filter(op => op.games >= ACTIVE_THRESHOLD)
   const inactive = ops.filter(op => op.games < ACTIVE_THRESHOLD)
 
   const n = Math.min(active.length, 7)
-  const cx = 180, cy = 200
-  const r = 110
+  if (n < 1) return null
 
-  const positions = active.slice(0, n).map((_, i) => {
-    const angle = (2 * Math.PI * i) / n - Math.PI / 2
-    return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) }
-  })
+  const cx = 180, cy = 175
+  const r = n <= 3 ? 85 : 110
+
+  // Position active nodes — special-case 2-node horizontal layout
+  let positions
+  if (n === 1) {
+    positions = [{ x: cx, y: cy }]
+  } else if (n === 2) {
+    positions = [{ x: cx - 90, y: cy }, { x: cx + 90, y: cy }]
+  } else {
+    positions = active.slice(0, n).map((_, i) => {
+      const angle = (2 * Math.PI * i) / n - Math.PI / 2
+      return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) }
+    })
+  }
 
   const inactivePositions = inactive.map((_, i) => {
     const angle = (2 * Math.PI * i) / Math.max(inactive.length, 1) + Math.PI / 6
     return {
-      x: cx + (r + 50) * Math.cos(angle),
-      y: cy + (r + 50) * Math.sin(angle),
+      x: cx + (r + 55) * Math.cos(angle),
+      y: cy + (r + 55) * Math.sin(angle),
     }
   })
 
   const edges = []
   if (duoStats) {
-    const maxGames = Math.max(...duoStats.map(d => d.games), 1)
     duoStats.forEach(duo => {
       const i1 = active.findIndex(o => o.puuid === duo.puuids?.[0] || o.name === duo.names?.[0])
       const i2 = active.findIndex(o => o.puuid === duo.puuids?.[1] || o.name === duo.names?.[1])
       if (i1 === -1 || i2 === -1 || i1 >= n || i2 >= n) return
       const wr = duo.win_rate <= 1 ? duo.win_rate * 100 : duo.win_rate
-      const stroke = wr >= 55 ? '#15803d' : wr >= 45 ? '#8a8a8a' : '#b91c1c'
-      const width = 1 + (duo.games / maxGames) * 5
-      const opacity = wr >= 55 ? 0.78 : wr >= 45 ? 0.4 : 0.55
-      edges.push({ i1, i2, stroke, width, opacity })
+      const wrRound = Math.round(wr)
+      const stroke = wrRound === 50 ? 'var(--muted)' : linkEdgeColor(wr)
+      edges.push({ i1, i2, stroke, wr: wrRound, games: duo.games, dashed: duo.games < 10 })
     })
   }
 
-  const abbrev = name => name.slice(0, 3).toUpperCase()
-
-  return { active, inactive, positions, inactivePositions, edges, n, abbrev }
+  return { active, inactive, positions, inactivePositions, edges, n, cx, cy, r }
 }
 
 export default function Briefing() {
@@ -1015,67 +1029,86 @@ export default function Briefing() {
               {linkData ? (
                 <svg
                   className="link-svg data-reveal"
-                  viewBox="0 40 360 340"
+                  viewBox="0 0 360 360"
                   xmlns="http://www.w3.org/2000/svg"
                 >
-                  {/* Edges */}
+                  {/* Scope ring — surveillance field boundary */}
+                  <circle cx={linkData.cx} cy={linkData.cy} r={linkData.r + 25}
+                    fill="none" stroke="var(--border-light)" strokeWidth={0.5} strokeDasharray="3,4" />
+                  {/* Center reference mark */}
+                  <line x1={linkData.cx - 6} y1={linkData.cy} x2={linkData.cx + 6} y2={linkData.cy}
+                    stroke="var(--border)" strokeWidth={0.5} />
+                  <line x1={linkData.cx} y1={linkData.cy - 6} x2={linkData.cx} y2={linkData.cy + 6}
+                    stroke="var(--border)" strokeWidth={0.5} />
+
+                  {/* Edges with WR annotations */}
                   {linkData.edges.map((e, i) => {
                     const p1 = linkData.positions[e.i1]
                     const p2 = linkData.positions[e.i2]
                     if (!p1 || !p2) return null
+                    const midX = (p1.x + p2.x) / 2
+                    const midY = (p1.y + p2.y) / 2
                     return (
-                      <line
-                        key={i}
-                        x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
-                        stroke={e.stroke}
-                        strokeWidth={e.width}
-                        strokeOpacity={e.opacity}
-                      />
-                    )
-                  })}
-                  {/* Active nodes */}
-                  {linkData.active.slice(0, linkData.n).map((op, i) => {
-                    const p = linkData.positions[i]
-                    if (!p) return null
-                    const code = linkData.abbrev(op.name)
-                    const labelY = p.y < 200 ? p.y - 18 : p.y + 26
-                    const anchor = 'middle'
-                    const labelX = p.x
-                    return (
-                      <g key={op.puuid || i}>
-                        <circle cx={p.x} cy={p.y} r={10} fill="#1a1a1a" />
-                        <text
-                          x={labelX} y={labelY}
-                          textAnchor={anchor}
-                          fontFamily="IBM Plex Mono, monospace"
-                          fontSize="12"
-                          fontWeight="700"
-                          fill="#1a1a1a"
-                          letterSpacing="1.5"
-                        >
-                          {code}
+                      <g key={`edge-${i}`}>
+                        <line
+                          x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
+                          stroke={e.stroke} strokeWidth={1.5}
+                          strokeDasharray={e.dashed ? '4,3' : 'none'}
+                          strokeOpacity={0.75}
+                        />
+                        <rect x={midX - 18} y={midY - 9} width={36} height={16} rx={2}
+                          fill="var(--card)" stroke={e.stroke} strokeWidth={0.75} opacity={0.95} />
+                        <text x={midX} y={midY + 3} textAnchor="middle"
+                          fontFamily="Courier Prime, monospace" fontSize="9.5" fontWeight="700"
+                          fill={e.stroke}>
+                          {e.wr}%
                         </text>
                       </g>
                     )
                   })}
-                  {/* Inactive orbit nodes */}
+
+                  {/* Active nodes — crosshair target markers */}
+                  {linkData.active.slice(0, linkData.n).map((op, i) => {
+                    const p = linkData.positions[i]
+                    if (!p) return null
+                    const labelBelow = p.y >= linkData.cy
+                    const labelY = labelBelow ? p.y + 22 : p.y - 18
+                    return (
+                      <g key={op.puuid || i}>
+                        {/* Crosshair arms */}
+                        <line x1={p.x - 10} y1={p.y} x2={p.x - 4} y2={p.y} stroke="var(--text)" strokeWidth={0.75} />
+                        <line x1={p.x + 4} y1={p.y} x2={p.x + 10} y2={p.y} stroke="var(--text)" strokeWidth={0.75} />
+                        <line x1={p.x} y1={p.y - 10} x2={p.x} y2={p.y - 4} stroke="var(--text)" strokeWidth={0.75} />
+                        <line x1={p.x} y1={p.y + 4} x2={p.x} y2={p.y + 10} stroke="var(--text)" strokeWidth={0.75} />
+                        {/* Center dot */}
+                        <circle cx={p.x} cy={p.y} r={2.5} fill="var(--text)" />
+                        {/* Operator name */}
+                        <text x={p.x} y={labelY} textAnchor="middle"
+                          fontFamily="IBM Plex Mono, monospace" fontSize="10" fontWeight="600"
+                          letterSpacing="1.2" fill="var(--text)">
+                          {op.name.toUpperCase()}
+                        </text>
+                        <text x={p.x} y={labelY + 11} textAnchor="middle"
+                          fontFamily="IBM Plex Mono, monospace" fontSize="8" fontWeight="400"
+                          fill="var(--muted)">
+                          {op.games} OPS
+                        </text>
+                      </g>
+                    )
+                  })}
+
+                  {/* Inactive nodes — faded minimal markers */}
                   {linkData.inactive.map((op, i) => {
                     const p = linkData.inactivePositions[i]
                     if (!p) return null
-                    const code = linkData.abbrev(op.name)
                     return (
-                      <g key={`inactive-${op.puuid || i}`}>
-                        <circle cx={p.x} cy={p.y} r={6} fill="#1a1a1a" stroke="#d4ccb8" strokeWidth={2} strokeDasharray="2,2" />
-                        <text
-                          x={p.x + 12} y={p.y + 4}
-                          textAnchor="start"
-                          fontFamily="IBM Plex Mono, monospace"
-                          fontSize="11"
-                          fontWeight="700"
-                          fill="#6b6558"
-                          letterSpacing="1.5"
-                        >
-                          {code}
+                      <g key={`inactive-${op.puuid || i}`} opacity={0.35}>
+                        <line x1={p.x - 5} y1={p.y} x2={p.x + 5} y2={p.y} stroke="var(--muted)" strokeWidth={0.5} />
+                        <line x1={p.x} y1={p.y - 5} x2={p.x} y2={p.y + 5} stroke="var(--muted)" strokeWidth={0.5} />
+                        <text x={p.x} y={p.y + 14} textAnchor="middle"
+                          fontFamily="IBM Plex Mono, monospace" fontSize="9" fontWeight="600"
+                          letterSpacing="1" fill="var(--muted)">
+                          {op.name.toUpperCase()}
                         </text>
                       </g>
                     )
@@ -1094,18 +1127,17 @@ export default function Briefing() {
             <div className="link-legend">
               <div className="legend-row">
                 <div className="legend-line" style={{ background: 'var(--green)' }} />
-                <span>HIGH WR PAIRING</span>
+                <span>FAVORABLE PAIRING</span>
               </div>
               <div className="legend-row">
                 <div className="legend-line" style={{ background: 'var(--red)' }} />
-                <span>LOW WR PAIRING</span>
+                <span>UNFAVORABLE PAIRING</span>
               </div>
               <div className="legend-row">
-                <div className="legend-node node-isolated" />
-                <span>NO JOINT OPS</span>
-              </div>
-              <div className="legend-row">
-                <span>LINE WEIGHT = JOINT GAMES</span>
+                <svg width="22" height="3" style={{ flexShrink: 0 }}>
+                  <line x1="0" y1="1.5" x2="22" y2="1.5" stroke="var(--muted)" strokeWidth="1.5" strokeDasharray="3,2" />
+                </svg>
+                <span>LOW CONFIDENCE (&lt;10 OPS)</span>
               </div>
             </div>
           </div>
