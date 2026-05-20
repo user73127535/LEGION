@@ -2271,10 +2271,11 @@ footer.site-footer {
   color: var(--muted); font-weight: 600;
   padding: 4px 12px 4px 0; text-transform: uppercase;
 }
-.match-ops th:nth-child(1), .match-ops td:nth-child(1) { width: 32%; }
-.match-ops th:nth-child(2), .match-ops td:nth-child(2) { width: 24%; }
-.match-ops th:nth-child(3), .match-ops td:nth-child(3) { width: 22%; }
-.match-ops th:nth-child(4), .match-ops td:nth-child(4) { width: 22%; }
+.match-ops th:nth-child(1), .match-ops td:nth-child(1) { width: 28%; }
+.match-ops th:nth-child(2), .match-ops td:nth-child(2) { width: 22%; }
+.match-ops th:nth-child(3), .match-ops td:nth-child(3) { width: 20%; }
+.match-ops th:nth-child(4), .match-ops td:nth-child(4) { width: 16%; }
+.match-ops th:nth-child(5), .match-ops td:nth-child(5) { width: 14%; }
 .match-ops th.col-num { text-align: right; padding-right: 0; }
 .match-ops td {
   font-family: var(--font-mono); font-size: 12.5px;
@@ -2296,7 +2297,8 @@ footer.site-footer {
   margin-left: 6px;
 }
 .match-ops .op-kda,
-.match-ops .op-dmg {
+.match-ops .op-dmg,
+.match-ops .op-gold {
   font-family: var(--font-stat);
   font-weight: 700;
 }
