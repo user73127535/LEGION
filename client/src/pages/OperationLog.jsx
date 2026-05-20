@@ -116,6 +116,7 @@ export default function OperationLog() {
   const [loading, setLoading] = useState(false)
   const [filterMode, setFilterMode] = useState('All')
   const [filterOutcome, setFilterOutcome] = useState('All')
+  const [filterScope, setFilterScope] = useState('roster')
   const [activeOperators, setActiveOperators] = useState(null)
 
   const cellId = activeCell?.id
@@ -161,11 +162,13 @@ export default function OperationLog() {
 
   const filtersAreDirty = filterMode !== 'All' ||
     filterOutcome !== 'All' ||
+    filterScope !== 'roster' ||
     (activeOperators !== null && activeOperators.size !== allOperatorNames.length)
 
   const resetFilters = () => {
     setFilterMode('All')
     setFilterOutcome('All')
+    setFilterScope('roster')
     setActiveOperators(new Set(allOperatorNames))
   }
 
@@ -173,11 +176,13 @@ export default function OperationLog() {
     if (filterMode !== 'All' && resolveMode(op.game_mode, op.queue_id) !== filterMode) return false
     if (filterOutcome === 'Wins' && !op.cell_members_won) return false
     if (filterOutcome === 'Losses' && op.cell_members_won) return false
-    if (activeOperators !== null) {
-      // Every participant in the match must be a selected operator —
-      // if anyone unselected is in the match, hide it
+    // Scope: 'full' = all joint deployments; 'roster' = exact operator match
+    if (filterScope === 'roster' && activeOperators !== null) {
       const opNames = op.participants.map((p) => p.name)
+      // Every participant must be selected (no unselected in game)
       if (!opNames.every((n) => currentOps.has(n))) return false
+      // Every selected operator must be a participant (all selected were present)
+      if (![...currentOps].every((n) => opNames.includes(n))) return false
     }
     return true
   })
@@ -322,8 +327,25 @@ export default function OperationLog() {
               ))}
             </div>
           </div>
+          <div className="filter-row">
+            <span className="filter-label">SCOPE</span>
+            <div className="filter-chips">
+              <button
+                className={`chip${filterScope === 'roster' ? ' active' : ''}`}
+                onClick={() => setFilterScope('roster')}
+              >
+                Selected Roster
+              </button>
+              <button
+                className={`chip${filterScope === 'full' ? ' active' : ''}`}
+                onClick={() => setFilterScope('full')}
+              >
+                Full Dossier
+              </button>
+            </div>
+          </div>
           {allOperatorNames.length > 0 && (
-            <div className="filter-row">
+            <div className={`filter-row${filterScope === 'full' ? ' filter-row-disabled' : ''}`}>
               <span className="filter-label">OPERATORS</span>
               <div className="filter-chips">
                 {allOperatorNames.map((name) => (
@@ -331,6 +353,7 @@ export default function OperationLog() {
                     className={`chip operator-chip${currentOps.has(name) ? ' active' : ' inactive'}`}
                     key={name}
                     onClick={() => toggleOperator(name)}
+                    disabled={filterScope === 'full'}
                   >
                     {name}
                   </button>
@@ -349,7 +372,7 @@ export default function OperationLog() {
             </div>
           </div>
 
-          {hasData && currentOps.size === 1 ? (
+          {hasData && filterScope === 'roster' && currentOps.size === 1 ? (
             <div className="scope-notice">
               <div className="scope-notice-label">SINGLE OPERATOR SELECTED</div>
               <div className="scope-notice-text">
