@@ -57,11 +57,11 @@ export function AuthProvider({ children }) {
     }
   }, [setActiveCell])
 
-  async function refreshCells() {
+  const refreshCells = useCallback(async () => {
     const data = await fetchCells()
     restoreActiveCell(data)
     return data
-  }
+  }, [fetchCells, restoreActiveCell])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -125,7 +125,7 @@ export function AuthProvider({ children }) {
     }
   }
 
-  async function signUp(email, password, riotGameName, riotTagLine) {
+  const signUp = useCallback(async (email, password, riotGameName, riotTagLine) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -133,17 +133,17 @@ export function AuthProvider({ children }) {
     })
     if (error) throw error
     return data
-  }
+  }, [])
 
-  async function signIn(email, password) {
+  const signIn = useCallback(async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
     return data
-  }
+  }, [])
 
-  async function logout() {
+  const logout = useCallback(async () => {
     await supabase.auth.signOut()
-  }
+  }, [])
 
   const value = {
     session,

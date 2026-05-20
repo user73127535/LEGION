@@ -403,9 +403,10 @@ function computeCellStats(matches, cellPuuids) {
     }
 
     // ─── TYPE: INCOMPATIBILITY (worst duo) ───
-    if (duo_stats.length > 0) {
-      const worstDuo = duo_stats.filter((d) => d.games >= 3).reduce((a, b) => a.win_rate < b.win_rate ? a : b, duo_stats[0])
-      if (worstDuo && worstDuo.win_rate < overallWR - 0.05) {
+    const qualifiedDuos = duo_stats.filter((d) => d.games >= 3)
+    if (qualifiedDuos.length > 0) {
+      const worstDuo = qualifiedDuos.reduce((a, b) => a.win_rate < b.win_rate ? a : b)
+      if (worstDuo.win_rate < overallWR - 0.05) {
         const delta = overallWR - worstDuo.win_rate
         const note = pickIdx([
           `Pair WR of ${(worstDuo.win_rate * 100).toFixed(0)}% falls ${(delta * 100).toFixed(0)} points below cell baseline. Champion overlap inconsistent. Reintroduction to joint operations has not produced improvement. Pattern is assessed as LIKELY structural.`,
@@ -436,9 +437,10 @@ function computeCellStats(matches, cellPuuids) {
     }
 
     // ─── TYPE: THEATER VULNERABILITY (worst mode) ───
-    if (game_mode_breakdown.length > 1) {
-      const worstMode = game_mode_breakdown.filter((m) => m.games >= 3).reduce((a, b) => a.win_rate < b.win_rate ? a : b, game_mode_breakdown[0])
-      if (worstMode && worstMode.win_rate < overallWR - 0.08) {
+    const qualifiedModes = game_mode_breakdown.filter((m) => m.games >= 3)
+    if (qualifiedModes.length > 0) {
+      const worstMode = qualifiedModes.reduce((a, b) => a.win_rate < b.win_rate ? a : b)
+      if (worstMode.win_rate < overallWR - 0.08) {
         const note = pickIdx([
           `Cell WR in ${worstMode.mode}: ${(worstMode.win_rate * 100).toFixed(0)}% across ${worstMode.games} deployments. Deficit of ${(((overallWR - worstMode.win_rate) * 100).toFixed(0))} points relative to cell baseline. Performance does not improve with additional exposure. Theater reassignment is assessed as PROBABLY advisable.`,
           `${(worstMode.win_rate * 100).toFixed(0)}% WR in ${worstMode.mode} (${worstMode.games} operations). ${(((overallWR - worstMode.win_rate) * 100).toFixed(0))}-point underperformance versus cell average. Pattern is stable and consistent. Analyst assesses continued deployment in this theater as LIKELY counterproductive.`,
@@ -539,8 +541,8 @@ function computeCellStats(matches, cellPuuids) {
     const lateNightGames = jointMatches.filter((m) => {
       const ts = m.info?.gameEndTimestamp ?? m.info?.gameStartTimestamp
       if (!ts) return false
-      const hour = new Date(ts).getHours()
-      return hour >= 0 && hour < 5 // midnight to 5am
+      const hour = new Date(ts).getUTCHours()
+      return hour >= 5 && hour < 10 // ~midnight–5am EST in UTC
     })
     if (lateNightGames.length >= 3) {
       const lateWins = lateNightGames.filter((m) => {
@@ -563,8 +565,8 @@ function computeCellStats(matches, cellPuuids) {
     const weekendGames = jointMatches.filter((m) => {
       const ts = m.info?.gameEndTimestamp ?? m.info?.gameStartTimestamp
       if (!ts) return false
-      const day = new Date(ts).getDay()
-      return day === 0 || day === 6
+      const day = new Date(ts).getUTCDay()
+      return day === 0 || day === 6 // Saturday/Sunday in UTC
     })
     if (weekendGames.length >= 4) {
       const weekendWins = weekendGames.filter((m) => {

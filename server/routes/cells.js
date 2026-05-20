@@ -27,6 +27,17 @@ function generateInviteCode() {
   return code
 }
 
+// ── Helper: verify user is a member of the cell ─────────────────
+async function requireCellMembership(sb, cellId, userId) {
+  const { data } = await sb
+    .from('cell_members')
+    .select('id')
+    .eq('cell_id', cellId)
+    .eq('user_id', userId)
+    .single()
+  return !!data
+}
+
 // ── Helper: get cell member PUUIDs ───────────────────────────────
 
 async function getCellPuuids(sb, cellId) {
@@ -92,16 +103,25 @@ router.get('/', requireAuth, async (req, res) => {
 
   if (error) return res.status(500).json({ error: error.message })
 
-  const cells = await Promise.all(
-    (data ?? []).map(async (row) => {
-      const cell = row.cells
-      const { count } = await sb
-        .from('cell_members')
-        .select('*', { count: 'exact', head: true })
-        .eq('cell_id', cell.id)
-      return { ...cell, member_count: count ?? 0 }
-    })
-  )
+  // Get member counts in a single query instead of one per cell (N+1 fix)
+  const cellIds = (data ?? []).map((row) => row.cells?.id).filter(Boolean)
+  let countMap = {}
+  if (cellIds.length > 0) {
+    const { data: countRows } = await sb
+      .from('cell_members')
+      .select('cell_id')
+      .in('cell_id', cellIds)
+    // Count occurrences per cell_id
+    countMap = (countRows ?? []).reduce((acc, row) => {
+      acc[row.cell_id] = (acc[row.cell_id] || 0) + 1
+      return acc
+    }, {})
+  }
+
+  const cells = (data ?? []).map((row) => ({
+    ...row.cells,
+    member_count: countMap[row.cells?.id] || 0,
+  }))
 
   res.json(cells)
 })
@@ -133,6 +153,9 @@ router.post('/', requireAuth, async (req, res) => {
 // GET /api/cells/:id — get cell with members
 router.get('/:id', requireAuth, async (req, res) => {
   const sb = supabase
+  if (!(await requireCellMembership(sb, req.params.id, req.user.id))) {
+    return res.status(403).json({ error: 'ACCESS DENIED — NOT A MEMBER OF THIS CELL' })
+  }
   const { data: cell, error } = await sb
     .from('cells')
     .select('id, name, created_at')
@@ -255,6 +278,9 @@ router.delete('/:id', requireAuth, async (req, res) => {
 
 router.post('/:id/ingest', requireAuth, async (req, res) => {
   const sb = supabase
+  if (!(await requireCellMembership(sb, req.params.id, req.user.id))) {
+    return res.status(403).json({ error: 'ACCESS DENIED — NOT A MEMBER OF THIS CELL' })
+  }
   const members = await getCellPuuids(sb, req.params.id)
   const puuids = members.map((m) => m.puuid)
 
@@ -339,6 +365,9 @@ router.post('/:id/ingest', requireAuth, async (req, res) => {
 
 router.get('/:id/stats', requireAuth, async (req, res) => {
   const sb = supabase
+  if (!(await requireCellMembership(sb, req.params.id, req.user.id))) {
+    return res.status(403).json({ error: 'ACCESS DENIED — NOT A MEMBER OF THIS CELL' })
+  }
   const members = await getCellPuuids(sb, req.params.id)
   const puuids = members.map((m) => m.puuid)
 
@@ -396,6 +425,9 @@ router.get('/:id/stats', requireAuth, async (req, res) => {
 
 router.get('/:id/operations', requireAuth, async (req, res) => {
   const sb = supabase
+  if (!(await requireCellMembership(sb, req.params.id, req.user.id))) {
+    return res.status(403).json({ error: 'ACCESS DENIED — NOT A MEMBER OF THIS CELL' })
+  }
   const members = await getCellPuuids(sb, req.params.id)
   const puuids = members.map((m) => m.puuid)
 

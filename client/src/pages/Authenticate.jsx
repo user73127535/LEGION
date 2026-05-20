@@ -1,13 +1,14 @@
 import { useState } from 'react'
-import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import Footer from '../components/Footer'
 
 export default function Authenticate() {
   const { signIn, signUp, user, cells, cellsLoading } = useAuth()
-  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const returnTo = searchParams.get('return_to')
+  // Validate return_to to prevent open redirects to external sites
+  const rawReturnTo = searchParams.get('return_to')
+  const returnTo = rawReturnTo && rawReturnTo.startsWith('/') && !rawReturnTo.startsWith('//') ? rawReturnTo : null
   const [mode, setMode] = useState('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
