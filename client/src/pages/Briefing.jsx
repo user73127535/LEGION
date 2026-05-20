@@ -122,6 +122,16 @@ function linkEdgeColor(wrPct) {
   return 'var(--red)'
 }
 
+// CIA-style bond classification
+function classifyBond(games, wrPct) {
+  if (games === 0) return { label: 'UNLINKED', color: 'var(--muted-light)' }
+  if (games < 5)   return { label: 'EMERGING', color: 'var(--muted)' }
+  if (wrPct >= 58 && games >= 15) return { label: 'CORE', color: 'var(--green)' }
+  if (wrPct >= 50) return { label: 'STABLE', color: 'var(--muted)' }
+  if (wrPct >= 42) return { label: 'VOLATILE', color: 'var(--amber)' }
+  return { label: 'STRAINED', color: 'var(--red)' }
+}
+
 function buildLinkSVG(ops, duoStats) {
   if (!ops || ops.length < 2) return null
 
@@ -156,17 +166,42 @@ function buildLinkSVG(ops, duoStats) {
     }
   })
 
-  const edges = []
+  // Build a lookup from duo_stats for quick pair matching
+  const duoLookup = new Map()
   if (duoStats) {
-    duoStats.forEach(duo => {
-      const i1 = active.findIndex(o => o.puuid === duo.puuids?.[0] || o.name === duo.names?.[0])
-      const i2 = active.findIndex(o => o.puuid === duo.puuids?.[1] || o.name === duo.names?.[1])
-      if (i1 === -1 || i2 === -1 || i1 >= n || i2 >= n) return
-      const wr = duo.win_rate <= 1 ? duo.win_rate * 100 : duo.win_rate
-      const wrRound = Math.round(wr)
-      const stroke = wrRound === 50 ? 'var(--muted)' : linkEdgeColor(wr)
-      edges.push({ i1, i2, stroke, wr: wrRound, games: duo.games, dashed: duo.games < 10 })
+    duoStats.forEach(d => {
+      const k1 = [d.puuids?.[0], d.puuids?.[1]].sort().join('|')
+      const k2 = [d.names?.[0], d.names?.[1]].sort().join('|')
+      duoLookup.set(k1, d)
+      duoLookup.set(k2, d)
     })
+  }
+
+  // Complete graph — every pair of active operators gets an edge
+  const edges = []
+  const maxGames = duoStats ? Math.max(...duoStats.map(d => d.games), 1) : 1
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const a = active[i], b = active[j]
+      const keyPuuid = [a.puuid, b.puuid].sort().join('|')
+      const keyName = [a.name, b.name].sort().join('|')
+      const duo = duoLookup.get(keyPuuid) || duoLookup.get(keyName)
+
+      if (duo && duo.games > 0) {
+        const wr = duo.win_rate <= 1 ? duo.win_rate * 100 : duo.win_rate
+        const wrRound = Math.round(wr)
+        const stroke = wrRound === 50 ? 'var(--muted)' : linkEdgeColor(wr)
+        const bond = classifyBond(duo.games, wrRound)
+        // Thickness: 1px base + up to 2.5px scaled by game share
+        const width = 1 + (duo.games / maxGames) * 2.5
+        edges.push({ i1: i, i2: j, stroke, wr: wrRound, games: duo.games,
+          dashed: duo.games < 10, width, bond, noData: false })
+      } else {
+        const bond = classifyBond(0, 0)
+        edges.push({ i1: i, i2: j, stroke: 'var(--muted-light)', wr: null,
+          games: 0, dashed: true, width: 0.5, bond, noData: true })
+      }
+    }
   }
 
   return { active, inactive, positions, inactivePositions, edges, n, cx, cy, r }
@@ -1032,7 +1067,7 @@ export default function Briefing() {
                   viewBox="0 0 400 370"
                   xmlns="http://www.w3.org/2000/svg"
                 >
-                  {/* Edges with WR annotations */}
+                  {/* Edges — complete graph with WR + bond classification */}
                   {linkData.edges.map((e, i) => {
                     const p1 = linkData.positions[e.i1]
                     const p2 = linkData.positions[e.i2]
@@ -1043,17 +1078,34 @@ export default function Briefing() {
                       <g key={`edge-${i}`}>
                         <line
                           x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
-                          stroke={e.stroke} strokeWidth={1.5}
+                          stroke={e.stroke} strokeWidth={e.width}
                           strokeDasharray={e.dashed ? '4,3' : 'none'}
-                          strokeOpacity={0.75}
+                          strokeOpacity={e.noData ? 0.3 : 0.75}
                         />
-                        <rect x={midX - 18} y={midY - 9} width={36} height={16} rx={2}
-                          fill="var(--card)" stroke={e.stroke} strokeWidth={0.75} opacity={0.95} />
-                        <text x={midX} y={midY + 3} textAnchor="middle"
-                          fontFamily="Courier Prime, monospace" fontSize="9.5" fontWeight="700"
-                          fill={e.stroke}>
-                          {e.wr}%
-                        </text>
+                        {!e.noData && (
+                          <>
+                            <rect x={midX - 18} y={midY - 9} width={36} height={16} rx={2}
+                              fill="var(--card)" stroke={e.stroke} strokeWidth={0.75} opacity={0.95} />
+                            <text x={midX} y={midY + 3} textAnchor="middle"
+                              fontFamily="Courier Prime, monospace" fontSize="9.5" fontWeight="700"
+                              fill={e.stroke}>
+                              {e.wr}%
+                            </text>
+                            {/* Bond classification label */}
+                            <text x={midX} y={midY + 20} textAnchor="middle"
+                              fontFamily="IBM Plex Mono, monospace" fontSize="7" fontWeight="600"
+                              letterSpacing="1.5" fill={e.bond.color}>
+                              {e.bond.label}
+                            </text>
+                          </>
+                        )}
+                        {e.noData && (
+                          <text x={midX} y={midY + 4} textAnchor="middle"
+                            fontFamily="IBM Plex Mono, monospace" fontSize="7" fontWeight="600"
+                            letterSpacing="1" fill="var(--muted-light)" opacity={0.5}>
+                            UNLINKED
+                          </text>
+                        )}
                       </g>
                     )
                   })}
@@ -1125,17 +1177,24 @@ export default function Briefing() {
             <div className="link-legend">
               <div className="legend-row">
                 <div className="legend-line" style={{ background: 'var(--green)' }} />
-                <span>FAVORABLE PAIRING</span>
+                <span>CORE &mdash; HIGH WR, DEEP HISTORY</span>
+              </div>
+              <div className="legend-row">
+                <div className="legend-line" style={{ background: 'var(--muted)' }} />
+                <span>STABLE / VOLATILE &mdash; MIXED RECORD</span>
               </div>
               <div className="legend-row">
                 <div className="legend-line" style={{ background: 'var(--red)' }} />
-                <span>UNFAVORABLE PAIRING</span>
+                <span>STRAINED &mdash; BELOW EXPECTATIONS</span>
               </div>
               <div className="legend-row">
                 <svg width="22" height="3" style={{ flexShrink: 0 }}>
-                  <line x1="0" y1="1.5" x2="22" y2="1.5" stroke="var(--muted)" strokeWidth="1.5" strokeDasharray="3,2" />
+                  <line x1="0" y1="1.5" x2="22" y2="1.5" stroke="var(--muted-light)" strokeWidth="0.75" strokeDasharray="3,2" />
                 </svg>
-                <span>LOW CONFIDENCE (&lt;10 OPS)</span>
+                <span>UNLINKED &mdash; NO JOINT OPS</span>
+              </div>
+              <div className="legend-row">
+                <span>LINE WEIGHT = DEPLOYMENT FREQUENCY</span>
               </div>
             </div>
           </div>
