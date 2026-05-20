@@ -116,7 +116,7 @@ export default function OperationLog() {
   const [loading, setLoading] = useState(false)
   const [filterMode, setFilterMode] = useState('All')
   const [filterOutcome, setFilterOutcome] = useState('All')
-  const [filterScope, setFilterScope] = useState('roster')
+  const [filterScope, setFilterScope] = useState('full')
   const [activeOperators, setActiveOperators] = useState(null)
 
   const cellId = activeCell?.id
@@ -154,21 +154,31 @@ export default function OperationLog() {
   const currentOps = activeOperators ?? new Set(allOperatorNames)
 
   const toggleOperator = (name) => {
-    const next = new Set(currentOps)
-    if (next.has(name)) next.delete(name)
-    else next.add(name)
-    setActiveOperators(next)
+    if (filterScope === 'full') {
+      // Leaving full dossier — only the clicked operator is selected
+      setActiveOperators(new Set([name]))
+      setFilterScope('roster')
+    } else {
+      const next = new Set(currentOps)
+      if (next.has(name)) next.delete(name)
+      else next.add(name)
+      setActiveOperators(next)
+    }
+  }
+
+  const activateFullDossier = () => {
+    setFilterScope('full')
+    setActiveOperators(new Set(allOperatorNames))
   }
 
   const filtersAreDirty = filterMode !== 'All' ||
     filterOutcome !== 'All' ||
-    filterScope !== 'roster' ||
-    (activeOperators !== null && activeOperators.size !== allOperatorNames.length)
+    filterScope !== 'full'
 
   const resetFilters = () => {
     setFilterMode('All')
     setFilterOutcome('All')
-    setFilterScope('roster')
+    setFilterScope('full')
     setActiveOperators(new Set(allOperatorNames))
   }
 
@@ -327,33 +337,21 @@ export default function OperationLog() {
               ))}
             </div>
           </div>
-          <div className="filter-row">
-            <span className="filter-label">SCOPE</span>
-            <div className="filter-chips">
-              <button
-                className={`chip${filterScope === 'roster' ? ' active' : ''}`}
-                onClick={() => setFilterScope('roster')}
-              >
-                Selected Roster
-              </button>
-              <button
-                className={`chip${filterScope === 'full' ? ' active' : ''}`}
-                onClick={() => setFilterScope('full')}
-              >
-                Full Dossier
-              </button>
-            </div>
-          </div>
           {allOperatorNames.length > 0 && (
-            <div className={`filter-row${filterScope === 'full' ? ' filter-row-disabled' : ''}`}>
+            <div className="filter-row">
               <span className="filter-label">OPERATORS</span>
               <div className="filter-chips">
+                <button
+                  className={`chip${filterScope === 'full' ? ' active' : ''}`}
+                  onClick={activateFullDossier}
+                >
+                  Full Dossier
+                </button>
                 {allOperatorNames.map((name) => (
                   <button
-                    className={`chip operator-chip${currentOps.has(name) ? ' active' : ' inactive'}`}
+                    className={`chip operator-chip${filterScope === 'full' ? ' active' : currentOps.has(name) ? ' active' : ' inactive'}`}
                     key={name}
                     onClick={() => toggleOperator(name)}
-                    disabled={filterScope === 'full'}
                   >
                     {name}
                   </button>
