@@ -1763,7 +1763,7 @@ footer.site-footer {
   margin-top: 14px; flex: 1;
   display: flex; align-items: center; justify-content: center;
 }
-.link-svg { width: 100%; height: auto; display: block; max-width: 360px; }
+.link-svg { width: 100%; height: auto; display: block; max-width: 400px; }
 .link-legend {
   display: grid; grid-template-columns: 1fr;
   gap: 8px;

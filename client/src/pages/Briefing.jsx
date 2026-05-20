@@ -132,15 +132,15 @@ function buildLinkSVG(ops, duoStats) {
   const n = Math.min(active.length, 7)
   if (n < 1) return null
 
-  const cx = 180, cy = 175
-  const r = n <= 3 ? 85 : 110
+  const cx = 200, cy = 175
+  const r = 110
 
-  // Position active nodes — special-case 2-node horizontal layout
+  // Position active nodes — special-case small node counts
   let positions
   if (n === 1) {
     positions = [{ x: cx, y: cy }]
   } else if (n === 2) {
-    positions = [{ x: cx - 90, y: cy }, { x: cx + 90, y: cy }]
+    positions = [{ x: cx - 120, y: cy }, { x: cx + 120, y: cy }]
   } else {
     positions = active.slice(0, n).map((_, i) => {
       const angle = (2 * Math.PI * i) / n - Math.PI / 2
@@ -1029,18 +1029,9 @@ export default function Briefing() {
               {linkData ? (
                 <svg
                   className="link-svg data-reveal"
-                  viewBox="0 0 360 360"
+                  viewBox="0 0 400 370"
                   xmlns="http://www.w3.org/2000/svg"
                 >
-                  {/* Scope ring — surveillance field boundary */}
-                  <circle cx={linkData.cx} cy={linkData.cy} r={linkData.r + 25}
-                    fill="none" stroke="var(--border-light)" strokeWidth={0.5} strokeDasharray="3,4" />
-                  {/* Center reference mark */}
-                  <line x1={linkData.cx - 6} y1={linkData.cy} x2={linkData.cx + 6} y2={linkData.cy}
-                    stroke="var(--border)" strokeWidth={0.5} />
-                  <line x1={linkData.cx} y1={linkData.cy - 6} x2={linkData.cx} y2={linkData.cy + 6}
-                    stroke="var(--border)" strokeWidth={0.5} />
-
                   {/* Edges with WR annotations */}
                   {linkData.edges.map((e, i) => {
                     const p1 = linkData.positions[e.i1]
@@ -1071,8 +1062,15 @@ export default function Briefing() {
                   {linkData.active.slice(0, linkData.n).map((op, i) => {
                     const p = linkData.positions[i]
                     if (!p) return null
-                    const labelBelow = p.y >= linkData.cy
-                    const labelY = labelBelow ? p.y + 22 : p.y - 18
+                    // Push label outward from center so it never overlaps edges
+                    const angle = Math.atan2(p.y - linkData.cy, p.x - linkData.cx)
+                    const labelDist = 26
+                    const lx = p.x + labelDist * Math.cos(angle)
+                    const ly = p.y + labelDist * Math.sin(angle)
+                    const dx = p.x - linkData.cx
+                    const anchor = dx > 15 ? 'start' : dx < -15 ? 'end' : 'middle'
+                    // For top-center nodes, nudge label upward; for bottom, downward
+                    const vertNudge = Math.abs(dx) <= 15 ? (p.y < linkData.cy ? -6 : 6) : 0
                     return (
                       <g key={op.puuid || i}>
                         {/* Crosshair arms */}
@@ -1082,13 +1080,13 @@ export default function Briefing() {
                         <line x1={p.x} y1={p.y + 4} x2={p.x} y2={p.y + 10} stroke="var(--text)" strokeWidth={0.75} />
                         {/* Center dot */}
                         <circle cx={p.x} cy={p.y} r={2.5} fill="var(--text)" />
-                        {/* Operator name */}
-                        <text x={p.x} y={labelY} textAnchor="middle"
+                        {/* Operator name — pushed outward from center */}
+                        <text x={lx} y={ly + vertNudge} textAnchor={anchor}
                           fontFamily="IBM Plex Mono, monospace" fontSize="10" fontWeight="600"
                           letterSpacing="1.2" fill="var(--text)">
                           {op.name.toUpperCase()}
                         </text>
-                        <text x={p.x} y={labelY + 11} textAnchor="middle"
+                        <text x={lx} y={ly + vertNudge + 12} textAnchor={anchor}
                           fontFamily="IBM Plex Mono, monospace" fontSize="8" fontWeight="400"
                           fill="var(--muted)">
                           {op.games} OPS
