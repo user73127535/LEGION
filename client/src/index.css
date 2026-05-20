@@ -405,19 +405,46 @@ header.site-header nav a.active {
   animation: data-fade 0.4s ease-out both;
 }
 
-/* ── Loading shimmer for placeholder bars ──
-   Pulsing bars = "intel being retrieved."
-   Static bars  = permanently classified (decorative).
+/* ── Loading state: scanner sweep + microfilm flicker ──
+   Sweep: A faint lighter band glides left-to-right across each bar,
+   like a microfiche reader scanning a classified page.
+   Flicker: Occasional brief opacity glitch, like degraded surveillance film.
    The .loading class is removed when data arrives,
-   so only placeholder bars shimmer — never decorative ones. */
-@keyframes intel-shimmer {
+   so only placeholder bars animate — decorative ones stay static. */
+
+@keyframes intel-scan {
+  from { background-position: -200% 0; }
+  to   { background-position: 200% 0; }
+}
+
+@keyframes intel-flicker {
   0%, 100% { opacity: 1; }
-  50%      { opacity: 0.3; }
+  14%  { opacity: 1; }
+  15%  { opacity: 0.5; }
+  16%  { opacity: 0.85; }
+  17%  { opacity: 1; }
+  65%  { opacity: 1; }
+  66%  { opacity: 0.55; }
+  67%  { opacity: 0.9; }
+  68%  { opacity: 0.6; }
+  69%  { opacity: 1; }
 }
 
 .loading .redacted-inline,
-.loading .redacted-bar {
-  animation: intel-shimmer 2s ease-in-out infinite;
+.loading .redacted-bar,
+.loading .redacted-block {
+  background: linear-gradient(
+    90deg,
+    var(--ink) 0%,
+    var(--ink) 40%,
+    #3a3a3a 50%,
+    var(--ink) 60%,
+    var(--ink) 100%
+  );
+  background-size: 200% 100%;
+  animation:
+    intel-scan 3s ease-in-out infinite,
+    intel-flicker 6s step-end infinite;
 }
 
 /* ── Respect user motion preferences ── */
@@ -430,8 +457,10 @@ header.site-header nav a.active {
     transform: none !important;
   }
   .loading .redacted-inline,
-  .loading .redacted-bar {
+  .loading .redacted-bar,
+  .loading .redacted-block {
     animation: none !important;
+    background: var(--ink) !important;
   }
 }
 

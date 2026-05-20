@@ -11,7 +11,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [cells, setCells] = useState([])
   const [activeCell, setActiveCellState] = useState(null)
-  const [cellsLoading, setCellsLoading] = useState(false)
+  const [cellsLoading, setCellsLoading] = useState(true)
 
   const fetchCells = useCallback(async () => {
     setCellsLoading(true)
@@ -70,6 +70,8 @@ export function AuthProvider({ children }) {
       if (session) {
         linkRiotIdIfNeeded(session.user)
         fetchCells().then(restoreActiveCell)
+      } else {
+        setCellsLoading(false)
       }
     })
 
@@ -82,6 +84,7 @@ export function AuthProvider({ children }) {
       if (event === 'SIGNED_OUT') {
         setCells([])
         setActiveCell(null)
+        setCellsLoading(false)
       }
     })
 

@@ -4,8 +4,11 @@ import { useAuth } from '../hooks/useAuth'
 
 export default function CellOverlay() {
   const navigate = useNavigate()
-  const { activeCell } = useAuth()
+  const { activeCell, cellsLoading } = useAuth()
   const [dismissed, setDismissed] = useState(false)
+
+  // Wait until cells have actually been fetched before deciding
+  if (cellsLoading) return null
 
   // State 1: Logged in, no cell at all → create or join
   if (!activeCell) {
