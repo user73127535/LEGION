@@ -14,7 +14,7 @@ function resolveModeName(match) {
     400: 'Normal',
     430: 'Normal',
     450: 'ARAM',
-    930: 'ARAM Mayhem',
+    2400: 'ARAM Mayhem',
     900: 'URF',
     1020: 'One for All',
     1300: 'Nexus Blitz',

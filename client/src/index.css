@@ -1631,6 +1631,23 @@ footer.site-footer {
 }
 .mode-row.mode-rotating .mode-name { color: var(--muted); font-style: italic; }
 
+.mode-advisory {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.6;
+  color: var(--muted-light);
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-light);
+  letter-spacing: 0.3px;
+}
+.advisory-marker {
+  color: var(--amber);
+  font-size: 7px;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
 /* ── Two-column (Duo + Heatmap) ── */
 .two-col {
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));

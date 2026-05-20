@@ -621,6 +621,14 @@ export default function Briefing() {
               ))
             )}
           </div>
+
+          <div className="mode-advisory">
+            <span className="advisory-marker">&#9632;</span>
+            ARAM: Mayhem match data is withheld from Riot API by directive.
+            Field records for this theater are not available for external analysis.
+            Matches played in this mode will not appear in LEGION reporting
+            until the restriction is lifted.
+          </div>
         </div>
 
         {/* ════════════════════════════
