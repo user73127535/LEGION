@@ -38,13 +38,44 @@ function resolveModeName(match) {
   return modeMap[gameMode?.toUpperCase?.()] || gameMode || 'UNKNOWN'
 }
 
+/**
+ * Find cell members who are on the SAME TEAM in a match.
+ * Returns the group from the team with the most cell members (>= 2),
+ * or null if no team has 2+ cell members on it.
+ *
+ * This is critical: two cell members on opposite teams is NOT a joint
+ * deployment — they didn't queue together. LEGION only tracks games
+ * where 2+ cell operators deploy on the same side.
+ */
+function getSameTeamCellGroup(participants, puuidSet) {
+  const cellParticipants = participants.filter((p) => puuidSet.has(p.puuid))
+  if (cellParticipants.length < 2) return null
+
+  // Group cell members by teamId (Riot API: 100 = blue, 200 = red)
+  const byTeam = {}
+  for (const p of cellParticipants) {
+    const tid = p.teamId
+    if (!byTeam[tid]) byTeam[tid] = []
+    byTeam[tid].push(p)
+  }
+
+  // Return the largest same-team group with 2+ members
+  let best = null
+  for (const members of Object.values(byTeam)) {
+    if (members.length >= 2 && (!best || members.length > best.length)) {
+      best = members
+    }
+  }
+  return best
+}
+
 function computeCellStats(matches, cellPuuids) {
   const puuidSet = new Set(cellPuuids)
 
+  // Joint match = 2+ cell members on the SAME team
   const jointMatches = matches.filter((m) => {
     const participants = m.info?.participants ?? []
-    const cellCount = participants.filter((p) => puuidSet.has(p.puuid)).length
-    return cellCount >= 2
+    return getSameTeamCellGroup(participants, puuidSet) !== null
   })
 
   const soloMatches = matches.filter((m) => {
@@ -53,11 +84,11 @@ function computeCellStats(matches, cellPuuids) {
     return cellCount === 1
   })
 
-  // Win rate together
+  // Win rate together — only counts wins for the same-team group
   const jointWins = jointMatches.filter((m) => {
     const participants = m.info?.participants ?? []
-    const cellMembers = participants.filter((p) => puuidSet.has(p.puuid))
-    return cellMembers.every((p) => p.win)
+    const cellTeam = getSameTeamCellGroup(participants, puuidSet)
+    return cellTeam && cellTeam[0].win
   }).length
 
   // Win rate apart (majority vote — if >50% of solo appearances won)
@@ -67,12 +98,12 @@ function computeCellStats(matches, cellPuuids) {
     return cellMember?.win
   }).length
 
-  // Champion synergy: group by puuid combo + champion combo
+  // Champion synergy: group by puuid combo + champion combo (same team only)
   const synergyMap = new Map()
   for (const match of jointMatches) {
     const participants = match.info?.participants ?? []
-    const cellParticipants = participants.filter((p) => puuidSet.has(p.puuid))
-    if (cellParticipants.length < 2) continue
+    const cellParticipants = getSameTeamCellGroup(participants, puuidSet)
+    if (!cellParticipants || cellParticipants.length < 2) continue
 
     const sortedKey = cellParticipants
       .map((p) => `${p.puuid}:${p.championName}`)
@@ -89,7 +120,7 @@ function computeCellStats(matches, cellPuuids) {
     }
     const entry = synergyMap.get(sortedKey)
     entry.games++
-    if (cellParticipants.every((p) => p.win)) entry.wins++
+    if (cellParticipants[0].win) entry.wins++
   }
 
   const champion_synergies = Array.from(synergyMap.values())
@@ -108,8 +139,8 @@ function computeCellStats(matches, cellPuuids) {
     if (!modeMap.has(mode)) modeMap.set(mode, { games: 0, wins: 0 })
     const entry = modeMap.get(mode)
     entry.games++
-    const cellParticipants = (match.info?.participants ?? []).filter((p) => puuidSet.has(p.puuid))
-    if (cellParticipants.every((p) => p.win)) entry.wins++
+    const cellTeam = getSameTeamCellGroup(match.info?.participants ?? [], puuidSet)
+    if (cellTeam && cellTeam[0].win) entry.wins++
   }
 
   const game_mode_breakdown = Array.from(modeMap.entries())
@@ -120,12 +151,13 @@ function computeCellStats(matches, cellPuuids) {
     }))
     .sort((a, b) => b.games - a.games)
 
-  // ── Per-operator stats in joint matches ──
+  // ── Per-operator stats in joint matches (same-team only) ──
   const operatorMap = new Map()
   for (const match of jointMatches) {
     const participants = match.info?.participants ?? []
-    const cellParticipants = participants.filter((p) => puuidSet.has(p.puuid))
-    const teamWon = cellParticipants.every((p) => p.win)
+    const cellParticipants = getSameTeamCellGroup(participants, puuidSet)
+    if (!cellParticipants) continue
+    const teamWon = cellParticipants[0].win
 
     for (const p of cellParticipants) {
       if (!operatorMap.has(p.puuid)) {
@@ -157,8 +189,8 @@ function computeCellStats(matches, cellPuuids) {
     })
     const winsWithout = gamesWithout.filter((m) => {
       const participants = m.info?.participants ?? []
-      const cellMembers = participants.filter((p) => puuidSet.has(p.puuid))
-      return cellMembers.every((p) => p.win)
+      const cellTeam = getSameTeamCellGroup(participants, puuidSet)
+      return cellTeam && cellTeam[0].win
     }).length
 
     // Top champions by games played
@@ -179,14 +211,15 @@ function computeCellStats(matches, cellPuuids) {
     }
   }).sort((a, b) => b.games - a.games)
 
-  // ── Duo pair win rates (NxN matrix) ──
+  // ── Duo pair win rates (NxN matrix) — same-team pairs only ──
   const duoMap = new Map()
   for (const match of jointMatches) {
     const participants = match.info?.participants ?? []
-    const cellParticipants = participants.filter((p) => puuidSet.has(p.puuid))
-    const teamWon = cellParticipants.every((p) => p.win)
+    const cellParticipants = getSameTeamCellGroup(participants, puuidSet)
+    if (!cellParticipants) continue
+    const teamWon = cellParticipants[0].win
 
-    // For every pair in this match
+    // For every pair in this match (all guaranteed same team)
     for (let i = 0; i < cellParticipants.length; i++) {
       for (let j = i + 1; j < cellParticipants.length; j++) {
         const key = [cellParticipants[i].puuid, cellParticipants[j].puuid].sort().join('|')
@@ -233,9 +266,9 @@ function computeCellStats(matches, cellPuuids) {
 
   const recent_form = sortedJoint.slice(0, 10).map((m) => {
     const participants = m.info?.participants ?? []
-    const cellMembers = participants.filter((p) => puuidSet.has(p.puuid))
+    const cellTeam = getSameTeamCellGroup(participants, puuidSet)
     return {
-      win: cellMembers.every((p) => p.win),
+      win: cellTeam ? cellTeam[0].win : false,
       timestamp: m.info?.gameEndTimestamp ?? null,
       mode: m.info?.gameMode ?? 'UNKNOWN',
     }
@@ -252,8 +285,8 @@ function computeCellStats(matches, cellPuuids) {
   if (chronological.length >= 5) {
     const results = chronological.map((m) => {
       const participants = m.info?.participants ?? []
-      const cellMembers = participants.filter((p) => puuidSet.has(p.puuid))
-      return cellMembers.every((p) => p.win)
+      const cellTeam = getSameTeamCellGroup(participants, puuidSet)
+      return cellTeam ? cellTeam[0].win : false
     })
 
     // Post-loss WR: win rate in games immediately after a loss
@@ -487,8 +520,8 @@ function computeCellStats(matches, cellPuuids) {
     let maxWinStreak = 0, currentWinStreak = 0
     const chrono = [...jointMatches].sort((a, b) => (a.info?.gameEndTimestamp ?? 0) - (b.info?.gameEndTimestamp ?? 0))
     for (const m of chrono) {
-      const cellMembers = (m.info?.participants ?? []).filter((p) => puuidSet.has(p.puuid))
-      if (cellMembers.every((p) => p.win)) { currentWinStreak++; maxWinStreak = Math.max(maxWinStreak, currentWinStreak) }
+      const cellTeam = getSameTeamCellGroup(m.info?.participants ?? [], puuidSet)
+      if (cellTeam && cellTeam[0].win) { currentWinStreak++; maxWinStreak = Math.max(maxWinStreak, currentWinStreak) }
       else currentWinStreak = 0
     }
     if (maxWinStreak >= 4) {
@@ -511,8 +544,8 @@ function computeCellStats(matches, cellPuuids) {
     })
     if (lateNightGames.length >= 3) {
       const lateWins = lateNightGames.filter((m) => {
-        const cellMembers = (m.info?.participants ?? []).filter((p) => puuidSet.has(p.puuid))
-        return cellMembers.every((p) => p.win)
+        const cellTeam = getSameTeamCellGroup(m.info?.participants ?? [], puuidSet)
+        return cellTeam && cellTeam[0].win
       }).length
       const lateWR = lateWins / lateNightGames.length
       const note = pickIdx([
@@ -535,8 +568,8 @@ function computeCellStats(matches, cellPuuids) {
     })
     if (weekendGames.length >= 4) {
       const weekendWins = weekendGames.filter((m) => {
-        const cellMembers = (m.info?.participants ?? []).filter((p) => puuidSet.has(p.puuid))
-        return cellMembers.every((p) => p.win)
+        const cellTeam = getSameTeamCellGroup(m.info?.participants ?? [], puuidSet)
+        return cellTeam && cellTeam[0].win
       }).length
       const weekendWR = weekendWins / weekendGames.length
       const weekdayGames = jointMatches.length - weekendGames.length
@@ -572,8 +605,8 @@ function computeCellStats(matches, cellPuuids) {
 
     // ─── TYPE: FLAWLESS OPERATION (any game with 0 deaths for all cell members) ───
     const flawless = jointMatches.filter((m) => {
-      const cellMembers = (m.info?.participants ?? []).filter((p) => puuidSet.has(p.puuid))
-      return cellMembers.every((p) => p.deaths === 0 && p.win)
+      const cellTeam = getSameTeamCellGroup(m.info?.participants ?? [], puuidSet)
+      return cellTeam && cellTeam.every((p) => p.deaths === 0 && p.win)
     })
     if (flawless.length > 0) {
       const note = pickIdx([

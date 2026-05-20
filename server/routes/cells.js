@@ -421,14 +421,30 @@ router.get('/:id/operations', requireAuth, async (req, res) => {
 
   const matchRows = await getStoredMatches(sb, puuids)
 
+  const puuidSet = new Set(puuids)
+
   const operations = []
   for (const row of matchRows) {
     const match = row.match_data
     const participants = match.info?.participants ?? []
-    const cellParticipants = participants.filter((p) => puuids.includes(p.puuid))
+    const allCellInMatch = participants.filter((p) => puuidSet.has(p.puuid))
 
-    // Only include games where 2+ cell members played together
-    if (cellParticipants.length < 2) continue
+    // Group cell members by teamId — only count as joint if 2+ on SAME team
+    if (allCellInMatch.length < 2) continue
+    const byTeam = {}
+    for (const p of allCellInMatch) {
+      const tid = p.teamId
+      if (!byTeam[tid]) byTeam[tid] = []
+      byTeam[tid].push(p)
+    }
+    // Find the team with the most cell members (must be >= 2)
+    let cellParticipants = null
+    for (const team of Object.values(byTeam)) {
+      if (team.length >= 2 && (!cellParticipants || team.length > cellParticipants.length)) {
+        cellParticipants = team
+      }
+    }
+    if (!cellParticipants) continue
 
     operations.push({
       match_id: row.match_id,
@@ -440,7 +456,7 @@ router.get('/:id/operations', requireAuth, async (req, res) => {
         const m = members.find((m) => m.puuid === p.puuid)
         return m?.riot_game_name ?? p.riotIdGameName ?? 'UNKNOWN'
       }),
-      cell_members_won: cellParticipants.every((p) => p.win),
+      cell_members_won: cellParticipants[0].win,
       participants: cellParticipants.map((p) => ({
         name: members.find((m) => m.puuid === p.puuid)?.riot_game_name ?? p.riotIdGameName,
         champion: p.championName,

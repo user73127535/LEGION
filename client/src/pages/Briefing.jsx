@@ -288,16 +288,26 @@ export default function Briefing() {
     return buildLinkSVG(stats.operator_stats, stats.duo_stats)
   }, [hasData, stats])
 
-  // Delta between joint WR and apart WR
+  // Find current user's wr_without from operator_stats
+  // This is the cell's joint WR in matches where THIS user was absent
+  const currentUserWrWithout = useMemo(() => {
+    if (!hasData || !stats.operator_stats) return null
+    const me = stats.operator_stats.find((op) =>
+      op.name?.toLowerCase() === currentUserName.toLowerCase()
+    )
+    return me?.wr_without ?? null
+  }, [hasData, stats, currentUserName])
+
+  // Delta between joint WR and WR-without-you
   const wrDelta = useMemo(() => {
     if (!hasData) return null
     const joint = stats.win_rate_together
-    const solo = stats.win_rate_apart
-    if (joint == null || solo == null) return null
+    const without = currentUserWrWithout
+    if (joint == null || without == null) return null
     const jv = joint <= 1 ? joint * 100 : joint
-    const sv = solo <= 1 ? solo * 100 : solo
-    return (jv - sv).toFixed(1)
-  }, [hasData, stats])
+    const wv = without <= 1 ? without * 100 : without
+    return (jv - wv).toFixed(1)
+  }, [hasData, stats, currentUserWrWithout])
 
   const [inviteOpen, setInviteOpen] = useState(false)
 
@@ -419,14 +429,14 @@ export default function Briefing() {
               </div>
             </div>
 
-            {/* WR Without You */}
+            {/* WR Without You — matches the table's "Cell WR Without —" column */}
             <div className="cm-summary-cell">
               <div className="cm-summary-label">WR Without You</div>
               <div className="cm-summary-value muted">
-                {hasData ? pct(stats.win_rate_apart) : <R w={80} h={28} />}
+                {hasData ? pct(currentUserWrWithout) : <R w={80} h={28} />}
               </div>
               <div className="cm-summary-note">
-                {hasData ? 'counterfactual baseline' : <R w={120} h={10} />}
+                {hasData ? 'joint games without you' : <R w={120} h={10} />}
               </div>
             </div>
 
