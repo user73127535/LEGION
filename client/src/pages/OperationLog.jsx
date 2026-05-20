@@ -174,8 +174,11 @@ export default function OperationLog() {
     if (filterOutcome === 'Wins' && !op.cell_members_won) return false
     if (filterOutcome === 'Losses' && op.cell_members_won) return false
     if (activeOperators !== null) {
-      const opNames = op.participants.map((p) => p.name)
-      if (!opNames.some((n) => currentOps.has(n))) return false
+      // Every selected operator must appear in this match's participants
+      const opNameSet = new Set(op.participants.map((p) => p.name))
+      for (const selected of currentOps) {
+        if (!opNameSet.has(selected)) return false
+      }
     }
     return true
   })
