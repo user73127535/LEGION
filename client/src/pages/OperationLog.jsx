@@ -232,7 +232,7 @@ export default function OperationLog() {
         </div>
       </div>
 
-      <div className="page-content">
+      <div className={`page-content${hasCell && !operations ? ' loading' : ''}`}>
 
         {/* ── SUMMARY STRIP ── */}
         <div className="summary-strip intel-stagger">

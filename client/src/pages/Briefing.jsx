@@ -359,7 +359,7 @@ export default function Briefing() {
         </div>
       </div>
 
-      <div className="dashboard">
+      <div className={`dashboard${hasCell && !stats ? ' loading' : ''}`}>
 
         {/* ── INVITE CODE BANNER (collapsible) ── */}
         {hasCell && activeCell.invite_code && (

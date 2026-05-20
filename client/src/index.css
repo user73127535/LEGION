@@ -405,6 +405,21 @@ header.site-header nav a.active {
   animation: data-fade 0.4s ease-out both;
 }
 
+/* ── Loading shimmer for placeholder bars ──
+   Pulsing bars = "intel being retrieved."
+   Static bars  = permanently classified (decorative).
+   The .loading class is removed when data arrives,
+   so only placeholder bars shimmer — never decorative ones. */
+@keyframes intel-shimmer {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.3; }
+}
+
+.loading .redacted-inline,
+.loading .redacted-bar {
+  animation: intel-shimmer 2s ease-in-out infinite;
+}
+
 /* ── Respect user motion preferences ── */
 @media (prefers-reduced-motion: reduce) {
   .intel-reveal,
@@ -413,6 +428,10 @@ header.site-header nav a.active {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
+  }
+  .loading .redacted-inline,
+  .loading .redacted-bar {
+    animation: none !important;
   }
 }
 
