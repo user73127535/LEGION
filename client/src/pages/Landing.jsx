@@ -28,8 +28,10 @@ export default function Landing() {
       <section className="stats-strip intel-reveal reveal-d3">
         <div className="stats-strip-inner intel-stagger">
           <div className="stat-block">
-            <div className="stat-block-value">2.4M</div>
-            <div className="stat-block-label">Matches Filed</div>
+            <div className="stat-block-value"><R w={72} h={30} /></div>
+            <div className="stat-block-label">
+              Matches Filed <span style={{ opacity: 0.6 }}>[CLASSIFIED]</span>
+            </div>
           </div>
           <div className="stat-block">
             <div className="stat-block-value"><R w={88} h={30} /></div>
