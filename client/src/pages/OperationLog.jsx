@@ -30,6 +30,7 @@ function RedactedMatchRow() {
             <th>Champion</th>
             <th>KDA</th>
             <th className="col-num">Damage</th>
+            <th className="col-num">Gold</th>
           </tr>
         </thead>
         <tbody>
@@ -39,6 +40,7 @@ function RedactedMatchRow() {
               <td><R w={60} h={12} /></td>
               <td><R w={70} h={12} /></td>
               <td className="col-num"><R w={40} h={12} /></td>
+              <td className="col-num"><R w={36} h={12} /></td>
             </tr>
           ))}
         </tbody>
@@ -382,6 +384,7 @@ export default function OperationLog() {
                           <th>Champion</th>
                           <th>KDA</th>
                           <th className="col-num">Damage</th>
+                          <th className="col-num">Gold</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -393,6 +396,7 @@ export default function OperationLog() {
                             <td>{p.champion}</td>
                             <td className="op-kda">{p.kills} / {p.deaths} / {p.assists}</td>
                             <td className="op-dmg col-num">{formatDamage(p.damage)}</td>
+                            <td className="op-gold col-num">{formatDamage(p.gold)}</td>
                           </tr>
                         ))}
                       </tbody>

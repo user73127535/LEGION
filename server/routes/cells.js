@@ -448,6 +448,7 @@ router.get('/:id/operations', requireAuth, async (req, res) => {
         deaths: p.deaths,
         assists: p.assists,
         damage: p.totalDamageDealtToChampions,
+        gold: p.goldEarned,
         win: p.win,
       })),
     })

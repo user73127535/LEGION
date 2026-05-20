@@ -515,9 +515,17 @@ export default function Briefing() {
                       }`}>
                         {pct(op.win_rate)}
                       </td>
-                      <td>
+                      <td className={`cm-num ${
+                        isYou && op.wr_without != null
+                          ? (op.wr_without <= 1 ? op.wr_without : op.wr_without / 100) > 0.5
+                            ? 'cm-num-pos'
+                            : (op.wr_without <= 1 ? op.wr_without : op.wr_without / 100) < 0.48
+                            ? 'cm-num-neg'
+                            : ''
+                          : ''
+                      }`}>
                         {isYou
-                          ? <span className="cm-num">{op.wr_without != null ? pct(op.wr_without) : '—'}</span>
+                          ? (op.wr_without != null ? pct(op.wr_without) : '—')
                           : <span className="redacted redacted-w-short" />}
                       </td>
                     </tr>
