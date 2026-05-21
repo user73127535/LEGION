@@ -349,7 +349,7 @@ export default function OperationLog() {
                 </button>
                 {allOperatorNames.map((name) => (
                   <button
-                    className={`chip operator-chip${filterScope === 'full' ? ' active' : currentOps.has(name) ? ' active' : ' inactive'}`}
+                    className={`chip operator-chip${filterScope === 'full' ? '' : currentOps.has(name) ? ' active' : ' inactive'}`}
                     key={name}
                     onClick={() => toggleOperator(name)}
                   >
