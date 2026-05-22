@@ -549,7 +549,8 @@ export default function Briefing() {
               {hasData && stats.operator_stats ? (
                 stats.operator_stats.map((op) => {
                   const isYou = currentUserName && op.name?.toLowerCase() === currentUserName.toLowerCase()
-                  const isActive = op.games >= 20
+                  const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000)
+                  const isActive = op.last_played != null && op.last_played > sevenDaysAgo
                   return (
                     <tr key={op.puuid} className={isYou ? 'cm-you' : ''}>
                       <td>

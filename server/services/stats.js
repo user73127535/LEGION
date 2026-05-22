@@ -158,6 +158,7 @@ function computeCellStats(matches, cellPuuids, memberRoster = []) {
     const cellParticipants = getSameTeamCellGroup(participants, puuidSet)
     if (!cellParticipants) continue
     const teamWon = cellParticipants[0].win
+    const matchTs = match.info?.gameEndTimestamp ?? 0
 
     for (const p of cellParticipants) {
       if (!operatorMap.has(p.puuid)) {
@@ -167,11 +168,13 @@ function computeCellStats(matches, cellPuuids, memberRoster = []) {
           games: 0,
           wins: 0,
           champions: new Map(),
+          lastPlayed: 0,
         })
       }
       const op = operatorMap.get(p.puuid)
       op.games++
       if (teamWon) op.wins++
+      if (matchTs > op.lastPlayed) op.lastPlayed = matchTs
       // Track champion picks
       const champ = p.championName
       if (!op.champions.has(champ)) op.champions.set(champ, { games: 0, wins: 0 })
@@ -208,6 +211,7 @@ function computeCellStats(matches, cellPuuids, memberRoster = []) {
       wr_without: gamesWithout.length > 0 ? winsWithout / gamesWithout.length : null,
       top_champions: topChamps,
       unique_champions: op.champions.size,
+      last_played: op.lastPlayed || null,
     }
   }).sort((a, b) => b.games - a.games)
 
@@ -224,6 +228,7 @@ function computeCellStats(matches, cellPuuids, memberRoster = []) {
       wr_without: jointMatches.length > 0 ? jointWins / jointMatches.length : null,
       top_champions: [],
       unique_champions: 0,
+      last_played: null,
     })
   }
 
