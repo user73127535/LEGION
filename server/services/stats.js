@@ -69,7 +69,7 @@ function getSameTeamCellGroup(participants, puuidSet) {
   return best
 }
 
-function computeCellStats(matches, cellPuuids) {
+function computeCellStats(matches, cellPuuids, memberRoster = []) {
   const puuidSet = new Set(cellPuuids)
 
   // Joint match = 2+ cell members on the SAME team
@@ -210,6 +210,22 @@ function computeCellStats(matches, cellPuuids) {
       unique_champions: op.champions.size,
     }
   }).sort((a, b) => b.games - a.games)
+
+  // Ensure every rostered cell member appears, even with 0 joint games or no PUUID
+  const seenPuuids = new Set(operator_stats.map((o) => o.puuid))
+  for (const member of memberRoster) {
+    if (member.puuid && seenPuuids.has(member.puuid)) continue
+    operator_stats.push({
+      puuid: member.puuid ?? member.id,
+      name: member.riot_game_name ?? 'UNKNOWN',
+      games: 0,
+      wins: 0,
+      win_rate: 0,
+      wr_without: jointMatches.length > 0 ? jointWins / jointMatches.length : null,
+      top_champions: [],
+      unique_champions: 0,
+    })
+  }
 
   // ── Duo pair win rates (NxN matrix) — same-team pairs only ──
   const duoMap = new Map()

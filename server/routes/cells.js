@@ -371,6 +371,20 @@ router.get('/:id/stats', requireAuth, async (req, res) => {
   const members = await getCellPuuids(sb, req.params.id)
   const puuids = members.map((m) => m.puuid)
 
+  // Full roster includes members without PUUIDs (unlinked Riot accounts)
+  const { data: allMemberRows } = await sb
+    .from('cell_members')
+    .select('user_id')
+    .eq('cell_id', req.params.id)
+  const allUserIds = (allMemberRows ?? []).map((r) => r.user_id)
+  const { data: allOpRows } = allUserIds.length > 0
+    ? await sb.from('operators').select('user_id, puuid, riot_game_name, riot_tag_line').in('user_id', allUserIds)
+    : { data: [] }
+  const fullRoster = (allMemberRows ?? []).map((row) => {
+    const op = (allOpRows ?? []).find((o) => o.user_id === row.user_id)
+    return { id: row.user_id, puuid: op?.puuid ?? null, riot_game_name: op?.riot_game_name ?? null }
+  })
+
   if (puuids.length === 0) {
     return res.json({
       total_games: 0,
@@ -380,12 +394,18 @@ router.get('/:id/stats', requireAuth, async (req, res) => {
       win_rate_apart: null,
       champion_synergies: [],
       game_mode_breakdown: [],
+      operator_stats: fullRoster.map((m) => ({
+        puuid: m.puuid,
+        name: m.riot_game_name ?? 'UNKNOWN',
+        games: 0, wins: 0, win_rate: 0, wr_without: null,
+        top_champions: [], unique_champions: 0,
+      })),
     })
   }
 
   const matchRows = await getStoredMatches(sb, puuids)
   const matches = matchRows.map((r) => r.match_data)
-  const stats = computeCellStats(matches, puuids)
+  const stats = computeCellStats(matches, puuids, fullRoster)
   stats.season_year = new Date().getUTCFullYear()
 
   const userIds = members.map((m) => m.id)
