@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const { supabase } = require('../db/supabase')
-const { getMatchIdsPaginated, getMatch } = require('../services/riot')
+const { getAccountByRiotId, getMatchIdsPaginated, getMatch } = require('../services/riot')
 const { computeCellStats } = require('../services/stats')
 
 // ── Auth middleware ──────────────────────────────────────────────
@@ -281,6 +281,44 @@ router.post('/:id/ingest', requireAuth, async (req, res) => {
   if (!(await requireCellMembership(sb, req.params.id, req.user.id))) {
     return res.status(403).json({ error: 'ACCESS DENIED — NOT A MEMBER OF THIS CELL' })
   }
+
+  // Attempt to link any cell members who have no operators entry yet
+  const { data: allMemberRows } = await sb
+    .from('cell_members')
+    .select('user_id')
+    .eq('cell_id', req.params.id)
+  const allUserIds = (allMemberRows ?? []).map((r) => r.user_id)
+
+  if (allUserIds.length > 0) {
+    const { data: existingOps } = await sb
+      .from('operators')
+      .select('user_id')
+      .in('user_id', allUserIds)
+    const linkedUserIds = new Set((existingOps ?? []).map((o) => o.user_id))
+    const unlinkedUserIds = allUserIds.filter((id) => !linkedUserIds.has(id))
+
+    for (const userId of unlinkedUserIds) {
+      try {
+        const { data: { user: authUser } } = await sb.auth.admin.getUserById(userId)
+        const name = authUser?.user_metadata?.riot_game_name
+        const tag = authUser?.user_metadata?.riot_tag_line
+        if (!name || !tag) continue
+
+        const account = await getAccountByRiotId(name, tag)
+        await sb.from('operators').upsert({
+          user_id: userId,
+          puuid: account.puuid,
+          riot_game_name: account.gameName,
+          riot_tag_line: account.tagLine,
+          is_verified: true,
+        }, { onConflict: 'user_id' })
+        console.log(`[LEGION] Auto-linked unlinked operator: ${name}#${tag}`)
+      } catch (err) {
+        console.warn(`[LEGION] Failed to auto-link operator ${userId}: ${err.message}`)
+      }
+    }
+  }
+
   const members = await getCellPuuids(sb, req.params.id)
   const puuids = members.map((m) => m.puuid)
 
