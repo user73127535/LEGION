@@ -240,6 +240,48 @@ router.post('/join-by-code', requireAuth, async (req, res) => {
 // POST /api/cells/join-by-code with a valid invite code. This prevents
 // unauthorized users from joining cells by guessing UUIDs.
 
+// DELETE /api/cells/:id/members/:userId — remove an operator (handler only)
+router.delete('/:id/members/:userId', requireAuth, async (req, res) => {
+  const sb = supabase
+  const { data: cell, error: lookupError } = await sb
+    .from('cells')
+    .select('id, created_by')
+    .eq('id', req.params.id)
+    .single()
+
+  if (lookupError || !cell) {
+    return res.status(404).json({ error: 'CELL NOT FOUND' })
+  }
+
+  if (cell.created_by !== req.user.id) {
+    return res.status(403).json({ error: 'ONLY THE HANDLER MAY REMOVE OPERATORS' })
+  }
+
+  if (req.params.userId === req.user.id) {
+    return res.status(400).json({ error: 'HANDLER CANNOT SELF-REMOVE. DISSOLVE THE CELL INSTEAD.' })
+  }
+
+  const { data: membership } = await sb
+    .from('cell_members')
+    .select('id')
+    .eq('cell_id', req.params.id)
+    .eq('user_id', req.params.userId)
+    .single()
+
+  if (!membership) {
+    return res.status(404).json({ error: 'OPERATOR NOT FOUND IN THIS CELL' })
+  }
+
+  const { error } = await sb
+    .from('cell_members')
+    .delete()
+    .eq('cell_id', req.params.id)
+    .eq('user_id', req.params.userId)
+
+  if (error) return res.status(500).json({ error: error.message })
+  res.json({ status: 'OPERATOR REMOVED FROM CELL' })
+})
+
 // DELETE /api/cells/:id — dissolve a cell (handler only)
 router.delete('/:id', requireAuth, async (req, res) => {
   const sb = supabase

@@ -1,14 +1,19 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { api } from '../lib/api'
+import ConfirmModal from './ConfirmModal'
 
 export default function Header() {
   const { user, logout, cells, activeCell, setActiveCell, refreshCells } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [dropdownOpen, setDropdownOpen] = useState(false)
-  const [confirmDissolve, setConfirmDissolve] = useState(null)
+  const [dissolveTarget, setDissolveTarget] = useState(null)
+  const [removeTarget, setRemoveTarget] = useState(null)
+  const [managingCellId, setManagingCellId] = useState(null)
+  const [managedMembers, setManagedMembers] = useState([])
+  const [managingLoading, setManagingLoading] = useState(false)
   const dropdownRef = useRef(null)
 
   const isAuthPage = location.pathname === '/authenticate'
@@ -17,6 +22,7 @@ export default function Header() {
     function handleClickOutside(e) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setDropdownOpen(false)
+        setManagingCellId(null)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -31,22 +37,56 @@ export default function Header() {
   function handleCellSelect(cell) {
     setActiveCell(cell)
     setDropdownOpen(false)
-    setConfirmDissolve(null)
+    setManagingCellId(null)
     if (location.pathname === '/briefing' || location.pathname === '/oplog') return
     navigate('/briefing')
   }
 
-  async function handleDissolve(cellId) {
+  const handleDissolve = useCallback(async () => {
+    if (!dissolveTarget) return
     try {
-      await api.deleteCell(cellId)
+      await api.deleteCell(dissolveTarget.id)
       await refreshCells()
-      setConfirmDissolve(null)
+      setDissolveTarget(null)
+      setManagingCellId(null)
       setDropdownOpen(false)
       navigate('/briefing')
     } catch (err) {
       alert(err.message)
     }
+  }, [dissolveTarget, refreshCells, navigate])
+
+  async function handleManageToggle(e, cell) {
+    e.stopPropagation()
+    if (managingCellId === cell.id) {
+      setManagingCellId(null)
+      return
+    }
+    setManagingCellId(cell.id)
+    setManagingLoading(true)
+    try {
+      const data = await api.getCell(cell.id)
+      setManagedMembers(data.members || [])
+    } catch {
+      setManagedMembers([])
+    } finally {
+      setManagingLoading(false)
+    }
   }
+
+  const handleRemoveOperator = useCallback(async () => {
+    if (!removeTarget) return
+    try {
+      await api.removeOperator(removeTarget.cellId, removeTarget.userId)
+      setRemoveTarget(null)
+      // Refresh member list
+      const data = await api.getCell(removeTarget.cellId)
+      setManagedMembers(data.members || [])
+      await refreshCells()
+    } catch (err) {
+      alert(err.message)
+    }
+  }, [removeTarget, refreshCells])
 
   const riotName = user?.user_metadata?.riot_game_name
   const riotTag = user?.user_metadata?.riot_tag_line
@@ -55,6 +95,7 @@ export default function Header() {
   const oplogLink = '/oplog'
 
   return (
+    <>
     <header className="site-header">
       <div className="header-left">
         <Link to="/" className="logo">LEGION</Link>
@@ -95,21 +136,11 @@ export default function Header() {
             ) : (
               <>
                 <div className="cs-section-label">CASE FILES</div>
-                {cells.map((cell) => (
-                  <div key={cell.id} className="cs-cell-entry">
-                    {confirmDissolve === cell.id ? (
-                      <div className="cs-confirm-dissolve">
-                        <div className="cs-confirm-text">DISSOLVE {cell.name}?</div>
-                        <div className="cs-confirm-actions">
-                          <button className="cs-confirm-yes" onClick={() => handleDissolve(cell.id)}>
-                            CONFIRM
-                          </button>
-                          <button className="cs-confirm-no" onClick={() => setConfirmDissolve(null)}>
-                            CANCEL
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
+                {cells.map((cell) => {
+                  const isHandler = cell.created_by === user?.id
+                  const isManaging = managingCellId === cell.id
+                  return (
+                    <div key={cell.id} className="cs-cell-entry">
                       <button
                         className={`cs-cell-row${activeCell?.id === cell.id ? ' active' : ''}`}
                         onClick={() => handleCellSelect(cell)}
@@ -120,20 +151,63 @@ export default function Header() {
                         </div>
                         <div className="cs-cell-meta">
                           {cell.member_count} OPERATOR{cell.member_count !== 1 ? 'S' : ''}
-                          {cell.created_by === user?.id && (
+                          {isHandler && (
                             <span
-                              className="cs-dissolve-btn"
-                              title="Dissolve cell"
-                              onClick={(e) => { e.stopPropagation(); setConfirmDissolve(cell.id) }}
+                              className="cs-manage-btn"
+                              title="Manage operators"
+                              onClick={(e) => handleManageToggle(e, cell)}
                             >
-                              &#x2715;
+                              {isManaging ? '▴' : '▾'}
                             </span>
                           )}
                         </div>
                       </button>
-                    )}
-                  </div>
-                ))}
+
+                      {/* Handler management panel */}
+                      {isHandler && isManaging && (
+                        <div className="cs-manage-panel">
+                          <div className="cs-manage-label">OPERATORS ON FILE</div>
+                          {managingLoading ? (
+                            <div className="cs-manage-loading">RETRIEVING ROSTER...</div>
+                          ) : (
+                            <div className="cs-manage-list">
+                              {managedMembers.map((member) => {
+                                const isYou = member.user_id === user?.id || member.id === user?.id
+                                const displayName = member.riot_game_name || 'UNKNOWN'
+                                return (
+                                  <div key={member.user_id || member.id} className="cs-manage-row">
+                                    <span className="cs-manage-name">
+                                      {displayName}
+                                      {isYou && <span className="cs-manage-you">YOU</span>}
+                                    </span>
+                                    {!isYou && (
+                                      <button
+                                        className="cs-manage-remove"
+                                        onClick={() => setRemoveTarget({
+                                          cellId: cell.id,
+                                          userId: member.user_id || member.id,
+                                          name: displayName,
+                                        })}
+                                      >
+                                        REMOVE
+                                      </button>
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )}
+                          <button
+                            className="cs-manage-dissolve"
+                            onClick={() => setDissolveTarget(cell)}
+                          >
+                            DISSOLVE CELL
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </>
             )}
             <hr className="cs-divider" />
@@ -169,6 +243,30 @@ export default function Header() {
           )
         )}
       </div>
+
     </header>
+
+    {dissolveTarget && (
+      <ConfirmModal
+        label="IRREVERSIBLE ACTION"
+        title={`Dissolve ${dissolveTarget.name}?`}
+        description="This will permanently dissolve the cell and remove all operators. All associated case data will be lost. This action cannot be undone."
+        confirmText={dissolveTarget.name}
+        onConfirm={handleDissolve}
+        onCancel={() => setDissolveTarget(null)}
+      />
+    )}
+
+    {removeTarget && (
+      <ConfirmModal
+        label="HANDLER ACTION"
+        title={`Remove ${removeTarget.name}?`}
+        description={`This will remove ${removeTarget.name} from the cell. They will lose access to all cell intelligence and operation logs. They can rejoin later with a valid intake code.`}
+        confirmText={removeTarget.name}
+        onConfirm={handleRemoveOperator}
+        onCancel={() => setRemoveTarget(null)}
+      />
+    )}
+    </>
   )
 }

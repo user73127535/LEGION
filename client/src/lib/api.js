@@ -44,6 +44,8 @@ export const api = {
     request('/cells/join-by-code', { method: 'POST', body: JSON.stringify({ invite_code }) }),
   deleteCell: (id) =>
     request(`/cells/${id}`, { method: 'DELETE' }),
+  removeOperator: (cellId, userId) =>
+    request(`/cells/${cellId}/members/${userId}`, { method: 'DELETE' }),
 
   // Match ingest — pulls new match data from Riot API for a cell
   ingestMatches: (id) =>

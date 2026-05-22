@@ -202,8 +202,11 @@ function computeCellStats(matches, cellPuuids, memberRoster = []) {
       .sort((a, b) => b.games - a.games)
       .slice(0, 5)
 
+    // Resolve user_id from roster by PUUID
+    const rosterEntry = memberRoster.find((m) => m.puuid === op.puuid)
     return {
       puuid: op.puuid,
+      user_id: rosterEntry?.id ?? null,
       name: op.name,
       games: op.games,
       wins: op.wins,
@@ -221,6 +224,7 @@ function computeCellStats(matches, cellPuuids, memberRoster = []) {
     if (member.puuid && seenPuuids.has(member.puuid)) continue
     operator_stats.push({
       puuid: member.puuid ?? member.id,
+      user_id: member.id,
       name: member.riot_game_name ?? 'UNKNOWN',
       games: 0,
       wins: 0,

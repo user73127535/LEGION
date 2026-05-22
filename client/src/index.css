@@ -220,44 +220,69 @@ header.site-header {
   color: var(--muted);
 }
 .cs-cell-entry { position: relative; }
-.cs-dissolve-btn {
+/* Handler: manage toggle chevron */
+.cs-manage-btn {
   margin-left: auto;
-  font-size: 11px;
+  font-size: 9px;
   color: var(--muted-light);
   cursor: pointer;
-  padding: 2px 4px;
+  padding: 2px 6px;
   border-radius: 2px;
   transition: color 0.12s, background 0.12s;
 }
-.cs-dissolve-btn:hover { color: var(--red); background: var(--red-bg); }
-.cs-confirm-dissolve {
-  padding: 10px 16px;
-  background: var(--red-bg);
-  border-left: 3px solid var(--red);
+.cs-manage-btn:hover { color: var(--text); background: var(--surface); }
+
+/* Handler: management panel (expands below cell row) */
+.cs-manage-panel {
+  padding: 8px 16px 10px;
+  background: var(--bg-alt);
+  border-top: 1px solid var(--border-light);
 }
-.cs-confirm-text {
+.cs-manage-label {
+  font-family: var(--font-mono);
+  font-size: 8.5px; letter-spacing: 2px; color: var(--muted);
+  font-weight: 600; margin-bottom: 6px;
+}
+.cs-manage-loading {
+  font-family: var(--font-mono);
+  font-size: 10px; color: var(--muted-light);
+  letter-spacing: 1px; padding: 6px 0;
+}
+.cs-manage-list { display: flex; flex-direction: column; gap: 2px; }
+.cs-manage-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 5px 8px; border-radius: 3px;
+  transition: background 0.1s;
+}
+.cs-manage-row:hover { background: var(--surface); }
+.cs-manage-name {
   font-family: var(--font-display);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.8px;
-  color: var(--red-dark);
-  margin-bottom: 8px;
+  font-size: 11.5px; font-weight: 600;
+  letter-spacing: 0.3px; color: var(--text);
+  display: flex; align-items: center; gap: 6px;
 }
-.cs-confirm-actions { display: flex; gap: 8px; }
-.cs-confirm-yes, .cs-confirm-no {
-  font-family: var(--font-display);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  padding: 4px 12px;
-  border-radius: 3px;
-  border: none;
-  cursor: pointer;
+.cs-manage-you {
+  font-family: var(--font-mono);
+  font-size: 7.5px; letter-spacing: 1.5px; padding: 1px 5px;
+  background: var(--text); color: var(--bg); font-weight: 600;
+  border-radius: 2px;
 }
-.cs-confirm-yes { background: var(--red); color: white; }
-.cs-confirm-yes:hover { background: var(--red-dark); }
-.cs-confirm-no { background: var(--surface); color: var(--text); }
-.cs-confirm-no:hover { background: var(--border); }
+.cs-manage-remove {
+  font-family: var(--font-mono); font-size: 8.5px; letter-spacing: 1.5px;
+  font-weight: 600; color: var(--muted-light); background: none;
+  border: 1px solid var(--border); border-radius: 2px;
+  padding: 2px 7px; cursor: pointer; transition: all 0.12s;
+}
+.cs-manage-remove:hover { color: var(--red); border-color: var(--red); background: var(--red-bg); }
+.cs-manage-dissolve {
+  display: block; width: 100%; margin-top: 8px;
+  padding: 6px 0; border: 1px solid var(--red);
+  border-radius: 3px; background: none;
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 2px;
+  font-weight: 600; color: var(--red); cursor: pointer;
+  transition: all 0.12s; text-align: center;
+}
+.cs-manage-dissolve:hover { background: var(--red); color: white; }
 .cs-divider { border-top: 1px solid var(--border); margin: 0; }
 .cs-action-row {
   display: flex; align-items: center; gap: 10px;
@@ -1560,6 +1585,69 @@ footer.site-footer {
 .cm-num-neg { color: var(--red); }
 .cm-summary-value.positive { color: var(--green); }
 .cm-summary-value.muted    { color: var(--muted-light); }
+
+/* ── Double Confirmation Overlay ── */
+.confirm-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(26, 26, 26, 0.55); backdrop-filter: blur(2px);
+  display: flex; align-items: center; justify-content: center;
+  animation: confirm-fade-in 0.15s ease-out;
+}
+@keyframes confirm-fade-in { from { opacity: 0; } to { opacity: 1; } }
+.confirm-modal {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 6px; width: 380px; max-width: 92vw;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+  overflow: hidden;
+}
+.confirm-header {
+  background: var(--red-bg); border-bottom: 1px solid var(--red);
+  padding: 16px 20px;
+}
+.confirm-header-label {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 2.5px;
+  color: var(--red); font-weight: 600; text-transform: uppercase; margin-bottom: 6px;
+}
+.confirm-header-title {
+  font-family: var(--font-display); font-size: 15px; font-weight: 700;
+  color: var(--red-dark); letter-spacing: -0.2px;
+}
+.confirm-body { padding: 18px 20px; }
+.confirm-body p {
+  font-family: var(--font-mono); font-size: 12px; color: var(--muted);
+  line-height: 1.6; margin: 0 0 16px;
+}
+.confirm-input-label {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 1.5px;
+  color: var(--muted); font-weight: 600; margin-bottom: 6px;
+  text-transform: uppercase;
+}
+.confirm-input {
+  width: 100%; padding: 8px 10px; font-family: var(--font-stat);
+  font-size: 14px; border: 1px solid var(--border); border-radius: 4px;
+  background: var(--bg); color: var(--text); box-sizing: border-box;
+}
+.confirm-input:focus { outline: none; border-color: var(--red); }
+.confirm-actions {
+  display: flex; gap: 10px; justify-content: flex-end;
+  padding: 14px 20px; border-top: 1px solid var(--border-light);
+  background: var(--surface);
+}
+.confirm-cancel {
+  font-family: var(--font-display); font-size: 11px; font-weight: 600;
+  letter-spacing: 0.8px; padding: 7px 16px; border-radius: 4px;
+  border: 1px solid var(--border); background: var(--card);
+  color: var(--text); cursor: pointer;
+}
+.confirm-cancel:hover { background: var(--bg); }
+.confirm-execute {
+  font-family: var(--font-display); font-size: 11px; font-weight: 600;
+  letter-spacing: 0.8px; padding: 7px 16px; border-radius: 4px;
+  border: none; background: var(--red); color: white; cursor: pointer;
+  transition: background 0.12s;
+}
+.confirm-execute:disabled { opacity: 0.35; cursor: not-allowed; }
+.confirm-execute:not(:disabled):hover { background: var(--red-dark); }
 /* Recent Form boxes */
 .form-streak { display: flex; gap: 4px; flex-wrap: nowrap; margin-top: 4px; }
 .form-box {
