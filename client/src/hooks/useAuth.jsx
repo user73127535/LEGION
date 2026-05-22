@@ -12,6 +12,7 @@ export function AuthProvider({ children }) {
   const [cells, setCells] = useState([])
   const [activeCell, setActiveCellState] = useState(null)
   const [cellsLoading, setCellsLoading] = useState(true)
+  const [riotLinkError, setRiotLinkError] = useState(null)
 
   const fetchCells = useCallback(async () => {
     setCellsLoading(true)
@@ -119,9 +120,10 @@ export function AuthProvider({ children }) {
 
     try {
       await api.linkRiotId({ riotGameName: name, riotTagLine: tag })
-      console.log(`[LEGION] Riot ID linked: ${name}#${tag}`)
+      setRiotLinkError(null)
     } catch (err) {
       console.error(`[LEGION] Riot ID link failed for ${name}#${tag}:`, err.message)
+      setRiotLinkError(`RIOT ID LINK FAILED FOR ${name}#${tag}: ${err.message}`)
     }
   }
 
@@ -154,6 +156,7 @@ export function AuthProvider({ children }) {
     activeCell,
     setActiveCell,
     refreshCells,
+    riotLinkError,
     signUp,
     signIn,
     logout,

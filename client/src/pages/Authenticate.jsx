@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { api } from '../lib/api'
 import Footer from '../components/Footer'
 
 export default function Authenticate() {
@@ -48,6 +49,7 @@ export default function Authenticate() {
     setError(null)
     setLoading(true)
     try {
+      await api.validateRiotId({ riotGameName: riotName, riotTagLine: riotTag })
       await signUp(email, password, riotName, riotTag)
       setSignUpSuccess(true)
     } catch (err) {

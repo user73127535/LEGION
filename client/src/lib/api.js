@@ -57,4 +57,18 @@ export const api = {
   getOperator: (puuid) => request(`/operators/${puuid}`),
   linkRiotId: (data) =>
     request('/operators/link', { method: 'POST', body: JSON.stringify(data) }),
+
+  // Public (no auth) — validates Riot ID exists before signup
+  validateRiotId: async (data) => {
+    const res = await fetch(`${BASE}/operators/validate-riot-id`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }))
+      throw new Error(err.error || 'Validation failed')
+    }
+    return res.json()
+  },
 }

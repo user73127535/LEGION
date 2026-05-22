@@ -41,6 +41,23 @@ async function requireAuth(req, res, next) {
   next()
 }
 
+// POST /operators/validate-riot-id — public pre-signup check (no auth required)
+router.post('/validate-riot-id', async (req, res) => {
+  const { riotGameName, riotTagLine } = req.body
+  if (!riotGameName || !riotTagLine) {
+    return res.status(400).json({ error: 'RIOT ID REQUIRED: gameName + tagLine' })
+  }
+  try {
+    const account = await lookupRiotAccount(riotGameName, riotTagLine)
+    res.json({ valid: true, gameName: account.gameName, tagLine: account.tagLine })
+  } catch (err) {
+    if (err.message === 'NOT_FOUND') {
+      return res.status(404).json({ error: 'INTAKE FAILED. RIOT ID NOT FOUND IN RIOT RECORDS.' })
+    }
+    return res.status(502).json({ error: 'RIOT API UNAVAILABLE. TRY AGAIN SHORTLY.' })
+  }
+})
+
 router.post('/link', requireAuth, async (req, res) => {
   try {
     const sb = supabase
