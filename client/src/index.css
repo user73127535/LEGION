@@ -2003,8 +2003,8 @@ footer.site-footer {
   padding: 3px 8px; border-radius: 3px;
 }
 .pool-bar {
-  display: flex; height: 26px; border-radius: 3px; overflow: visible;
-  border: none;
+  display: flex; align-items: stretch; height: 26px; border-radius: 3px;
+  overflow: visible; border: none;
 }
 .pool-bar .pool-seg:first-child { border-radius: 3px 0 0 3px; }
 .pool-bar .pool-seg:last-child { border-radius: 0 3px 3px 0; }
@@ -2015,7 +2015,7 @@ footer.site-footer {
   font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
   white-space: nowrap; min-width: 0;
   padding: 0 5px; position: relative; cursor: default;
-  overflow: visible;
+  overflow: visible; box-sizing: border-box;
 }
 .pool-seg-label {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
