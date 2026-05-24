@@ -38,6 +38,17 @@ function resolveModeName(match) {
   return modeMap[gameMode?.toUpperCase?.()] || gameMode || 'UNKNOWN'
 }
 
+const THEATER_ORDER = ["SUMMONER'S RIFT", 'HOWLING ABYSS', 'RINGS OF WRATH']
+
+function resolveTheater(modeName) {
+  const map = {
+    'ARAM': 'HOWLING ABYSS',
+    'ARAM Mayhem': 'HOWLING ABYSS',
+    'Arena': 'RINGS OF WRATH',
+  }
+  return map[modeName] || "SUMMONER'S RIFT"
+}
+
 /**
  * Find cell members who are on the SAME TEAM in a match.
  * Returns the group from the team with the most cell members (>= 2),
@@ -159,6 +170,8 @@ function computeCellStats(matches, cellPuuids, memberRoster = []) {
     if (!cellParticipants) continue
     const teamWon = cellParticipants[0].win
     const matchTs = match.info?.gameEndTimestamp ?? 0
+    const modeName = resolveModeName(match)
+    const theater = resolveTheater(modeName)
 
     for (const p of cellParticipants) {
       if (!operatorMap.has(p.puuid)) {
@@ -168,6 +181,7 @@ function computeCellStats(matches, cellPuuids, memberRoster = []) {
           games: 0,
           wins: 0,
           champions: new Map(),
+          theaterData: new Map(),
           lastPlayed: 0,
         })
       }
@@ -175,12 +189,23 @@ function computeCellStats(matches, cellPuuids, memberRoster = []) {
       op.games++
       if (teamWon) op.wins++
       if (matchTs > op.lastPlayed) op.lastPlayed = matchTs
-      // Track champion picks
+      // Track champion picks (overall)
       const champ = p.championName
       if (!op.champions.has(champ)) op.champions.set(champ, { games: 0, wins: 0 })
       const c = op.champions.get(champ)
       c.games++
       if (teamWon) c.wins++
+      // Track champion picks (per theater)
+      if (!op.theaterData.has(theater)) {
+        op.theaterData.set(theater, { games: 0, wins: 0, champions: new Map() })
+      }
+      const td = op.theaterData.get(theater)
+      td.games++
+      if (teamWon) td.wins++
+      if (!td.champions.has(champ)) td.champions.set(champ, { games: 0, wins: 0 })
+      const tc = td.champions.get(champ)
+      tc.games++
+      if (teamWon) tc.wins++
     }
   }
 
@@ -202,6 +227,26 @@ function computeCellStats(matches, cellPuuids, memberRoster = []) {
       .sort((a, b) => b.games - a.games)
       .slice(0, 5)
 
+    // Per-theater champion breakdown
+    const theaters = {}
+    for (const t of THEATER_ORDER) {
+      const td = op.theaterData.get(t)
+      if (td) {
+        const tChamps = Array.from(td.champions.entries())
+          .map(([name, { games, wins }]) => ({ name, games, wins, win_rate: games > 0 ? wins / games : 0 }))
+          .sort((a, b) => b.games - a.games)
+          .slice(0, 5)
+        theaters[t] = {
+          games: td.games, wins: td.wins,
+          win_rate: td.games > 0 ? td.wins / td.games : 0,
+          top_champions: tChamps,
+          unique_champions: td.champions.size,
+        }
+      } else {
+        theaters[t] = { games: 0, wins: 0, win_rate: 0, top_champions: [], unique_champions: 0 }
+      }
+    }
+
     // Resolve user_id from roster by PUUID
     const rosterEntry = memberRoster.find((m) => m.puuid === op.puuid)
     return {
@@ -214,6 +259,7 @@ function computeCellStats(matches, cellPuuids, memberRoster = []) {
       wr_without: gamesWithout.length > 0 ? winsWithout / gamesWithout.length : null,
       top_champions: topChamps,
       unique_champions: op.champions.size,
+      theaters,
       last_played: op.lastPlayed || null,
     }
   }).sort((a, b) => b.games - a.games)
@@ -222,6 +268,10 @@ function computeCellStats(matches, cellPuuids, memberRoster = []) {
   const seenPuuids = new Set(operator_stats.map((o) => o.puuid))
   for (const member of memberRoster) {
     if (member.puuid && seenPuuids.has(member.puuid)) continue
+    const emptyTheaters = {}
+    for (const t of THEATER_ORDER) {
+      emptyTheaters[t] = { games: 0, wins: 0, win_rate: 0, top_champions: [], unique_champions: 0 }
+    }
     operator_stats.push({
       puuid: member.puuid ?? member.id,
       user_id: member.id,
@@ -232,6 +282,7 @@ function computeCellStats(matches, cellPuuids, memberRoster = []) {
       wr_without: jointMatches.length > 0 ? jointWins / jointMatches.length : null,
       top_champions: [],
       unique_champions: 0,
+      theaters: emptyTheaters,
       last_played: null,
     })
   }
@@ -469,6 +520,7 @@ function computeCellStats(matches, cellPuuids, memberRoster = []) {
         const note = pickIdx([
           `Cell WR in ${worstMode.mode}: ${(worstMode.win_rate * 100).toFixed(0)}% across ${worstMode.games} deployments. Deficit of ${(((overallWR - worstMode.win_rate) * 100).toFixed(0))} points relative to cell baseline. Performance does not improve with additional exposure. Theater reassignment is assessed as PROBABLY advisable.`,
           `${(worstMode.win_rate * 100).toFixed(0)}% WR in ${worstMode.mode} (${worstMode.games} operations). ${(((overallWR - worstMode.win_rate) * 100).toFixed(0))}-point underperformance versus cell average. Pattern is stable and consistent. Analyst assesses continued deployment in this theater as LIKELY counterproductive.`,
+          `${worstMode.games} operations in ${worstMode.mode}. WR: ${(worstMode.win_rate * 100).toFixed(0)}%. The cell's performance floor in this theater remains well below acceptable parameters. No corrective trend observed across the sample. Tactical reallocation is assessed as PROBABLY overdue.`,
         ], 3)
         candidates.push({ weight: (overallWR - worstMode.win_rate) * 100 + worstMode.games * 0.5, obs: {
           severity: 'red', title: 'THEATER VULNERABILITY',
@@ -502,6 +554,7 @@ function computeCellStats(matches, cellPuuids, memberRoster = []) {
         const note = pickIdx([
           `Operator ${anchor.name} records ${(anchor.win_rate * 100).toFixed(0)}% WR across ${anchor.games} joint deployments — ${((overallWR - anchor.win_rate) * 100).toFixed(0)} points below cell baseline. Cell WR in their absence: ${anchor.wr_without != null ? (anchor.wr_without * 100).toFixed(0) + '%' : 'INSUFFICIENT DATA'}. Performance deficit is assessed as PROBABLY structural.`,
           `${anchor.name}: ${(anchor.win_rate * 100).toFixed(0)}% joint WR. Cell baseline: ${(overallWR * 100).toFixed(0)}%. Deficit of ${((overallWR - anchor.win_rate) * 100).toFixed(0)} points persists across recorded sample. No mitigating pattern identified.`,
+          `Cell outcomes degrade measurably when ${anchor.name} is deployed. ${(anchor.win_rate * 100).toFixed(0)}% WR across ${anchor.games} operations — ${((overallWR - anchor.win_rate) * 100).toFixed(0)} points below the cell norm. Whether the deficit stems from individual performance or compositional mismatch is UNDETERMINED.`,
         ], 5)
         candidates.push({ weight: (overallWR - anchor.win_rate) * 100 + anchor.games, obs: {
           severity: 'red', title: 'PERFORMANCE DEFICIT',
@@ -533,12 +586,104 @@ function computeCellStats(matches, cellPuuids, memberRoster = []) {
           const note = pickIdx([
             `${op.name} fields ${topChamp.name} in ${(pickRate * 100).toFixed(0)}% of recorded joint deployments. Champion pool depth is assessed as LOW. Ban-phase exposure is assessed as ALMOST CERTAINLY a recurring vulnerability.`,
             `Pick rate for ${topChamp.name} by ${op.name}: ${(pickRate * 100).toFixed(0)}% across joint operations. Operator flexibility is assessed as LIMITED. Adversarial ban pressure is LIKELY to degrade this operator's effectiveness materially.`,
+          `${topChamp.name} accounts for ${(pickRate * 100).toFixed(0)}% of ${op.name}'s joint deployment selections. Fallback options in the operator's record are sparse and underperforming. A targeted ban against this champion would ALMOST CERTAINLY force a suboptimal pivot.`,
           ], 7)
           candidates.push({ weight: pickRate * 40, obs: {
             severity: 'amber', title: 'ONE-TRICK EXPOSURE',
             subject: `${op.name} / ${topChamp.name}`, note,
           }})
           break // Only one one-trick obs
+        }
+      }
+    }
+
+    // ─── TYPE: THEATER DIVERGENCE (different champ pools per map) ───
+    for (const op of operator_stats) {
+      if (!op.theaters || op.games < 5) continue
+      const activeTheaters = THEATER_ORDER.filter(t => op.theaters[t]?.games >= 3)
+      if (activeTheaters.length >= 2) {
+        const champSets = activeTheaters.map(t =>
+          new Set(op.theaters[t].top_champions.map(c => c.name))
+        )
+        // Jaccard similarity between all theater pairs
+        let minSim = 1
+        for (let i = 0; i < champSets.length; i++) {
+          for (let j = i + 1; j < champSets.length; j++) {
+            const intersection = [...champSets[i]].filter(c => champSets[j].has(c)).length
+            const union = new Set([...champSets[i], ...champSets[j]]).size
+            if (union > 0) minSim = Math.min(minSim, intersection / union)
+          }
+        }
+        if (minSim <= 0.15) {
+          const theaterSummary = activeTheaters.map(t => {
+            const top = op.theaters[t].top_champions[0]
+            return `${t}: ${top?.name || 'N/A'}`
+          }).join('; ')
+          const note = pickIdx([
+            `${op.name} fields materially different champion pools across theaters. ${theaterSummary}. Cross-theater overlap is assessed as NEGLIGIBLE. Operator appears to maintain separate selection doctrines per map environment.`,
+            `Champion selection by ${op.name} diverges sharply between theaters. ${theaterSummary}. Overlap coefficient: ${(minSim * 100).toFixed(0)}%. Analyst assesses this as a DELIBERATE adaptation to map geometry rather than incidental variance.`,
+            `Comparative review of ${op.name}'s deployment records reveals theater-isolated selection patterns. ${theaterSummary}. Whether this reflects tactical sophistication or fundamentally different comfort zones remains UNDETERMINED.`,
+          ], 13)
+          candidates.push({ weight: (1 - minSim) * 50 + op.games * 0.5, obs: {
+            severity: 'blue', title: 'THEATER DIVERGENCE',
+            subject: `${op.name} — cross-map pool split`, note,
+          }})
+          break
+        }
+      }
+    }
+
+    // ─── TYPE: THEATER SPECIALIST (one map dominates) ───
+    for (const op of operator_stats) {
+      if (!op.theaters || op.games < 8) continue
+      for (const t of THEATER_ORDER) {
+        const td = op.theaters[t]
+        if (!td || td.games < 5) continue
+        const concentration = td.games / op.games
+        if (concentration >= 0.80) {
+          const note = pickIdx([
+            `${(concentration * 100).toFixed(0)}% of ${op.name}'s joint deployments occur on ${t}. ${td.games} of ${op.games} recorded operations confined to a single theater. Cross-map versatility is assessed as UNTESTED.`,
+            `${op.name} deploys almost exclusively on ${t} (${td.games}/${op.games} operations). Whether this reflects preference, scheduling, or queue availability is undetermined. Operational range outside this theater: UNVERIFIED.`,
+            `${op.name}'s operational footprint is almost entirely confined to ${t}. ${td.games} deployments on-theater versus ${op.games - td.games} off-theater. The cell's exposure to this operator in other map environments is classified as MINIMAL.`,
+          ], 14)
+          candidates.push({ weight: concentration * 30 + td.games * 0.5, obs: {
+            severity: 'amber', title: 'THEATER SPECIALIST',
+            subject: `${op.name} — ${t}`, note,
+          }})
+          break
+        }
+      }
+    }
+
+    // ─── TYPE: CROSS-THEATER CONSISTENCY (same champs everywhere) ───
+    for (const op of operator_stats) {
+      if (!op.theaters || op.games < 10) continue
+      const activeTheaters = THEATER_ORDER.filter(t => op.theaters[t]?.games >= 3)
+      if (activeTheaters.length >= 2) {
+        const champSets = activeTheaters.map(t =>
+          new Set(op.theaters[t].top_champions.map(c => c.name))
+        )
+        let maxSim = 0
+        for (let i = 0; i < champSets.length; i++) {
+          for (let j = i + 1; j < champSets.length; j++) {
+            const intersection = [...champSets[i]].filter(c => champSets[j].has(c)).length
+            const union = new Set([...champSets[i], ...champSets[j]]).size
+            if (union > 0) maxSim = Math.max(maxSim, intersection / union)
+          }
+        }
+        if (maxSim >= 0.60) {
+          const sharedChamps = [...champSets[0]].filter(c => champSets.every(s => s.has(c)))
+          const sharedList = sharedChamps.length > 0 ? sharedChamps.join(', ') : 'overlapping selections'
+          const note = pickIdx([
+            `${op.name} maintains a consistent champion pool across ${activeTheaters.length} active theaters. Core selections (${sharedList}) appear regardless of map environment. Operator's selection doctrine is assessed as THEATER-AGNOSTIC.`,
+            `Cross-theater analysis of ${op.name}'s deployments reveals high pool overlap (${(maxSim * 100).toFixed(0)}% similarity). ${sharedList} fielded across map types. This consistency is UNUSUAL — most operators adapt selections to map geometry.`,
+            `${op.name}'s selection profile remains effectively unchanged across map types. Shared picks include ${sharedList}. Whether this rigidity is a strength (mastery) or liability (inflexibility) depends on team composition. Verdict: INCONCLUSIVE.`,
+          ], 15)
+          candidates.push({ weight: maxSim * 35 + op.games * 0.3, obs: {
+            severity: 'blue', title: 'CROSS-THEATER CONSISTENCY',
+            subject: `${op.name} — uniform pool`, note,
+          }})
+          break
         }
       }
     }
@@ -555,6 +700,7 @@ function computeCellStats(matches, cellPuuids, memberRoster = []) {
       const note = pickIdx([
         `Maximum consecutive wins on record: ${maxWinStreak} operations. No streak exceeding this threshold has been observed. Whether the limiting factor is performance variance or matchmaking pressure has not been determined.`,
         `${maxWinStreak}-game win streak recorded. Cell has not surpassed this operational ceiling within the current dataset. Contributing factors — opponent calibration, fatigue, or composition degradation — are assessed as PROBABLY compounding over extended sessions.`,
+        `Longest observed winning sequence: ${maxWinStreak} consecutive operations. The cell has reached but not exceeded this threshold. Analyst notes that matchmaking recalibration following sustained success is a PROBABLE contributing factor.`,
       ], 8)
       candidates.push({ weight: maxWinStreak * 6, obs: {
         severity: 'blue', title: 'OPERATIONAL CEILING',
@@ -578,6 +724,7 @@ function computeCellStats(matches, cellPuuids, memberRoster = []) {
       const note = pickIdx([
         `${lateNightGames.length} deployments logged between 0000 and 0500 local. WR: ${(lateWR * 100).toFixed(0)}%. ${lateWR < overallWR ? `Performance falls ${(((overallWR - lateWR) * 100).toFixed(0))} points below cell baseline during this window. Degradation is assessed as PROBABLY fatigue-related.` : `Performance during this window meets or exceeds cell baseline. Contributing factors are undetermined. Surveillance continues.`}`,
         `Late-window activity: ${lateNightGames.length} joint operations between 0000 and 0500 hours. WR: ${(lateWR * 100).toFixed(0)}%. ${lateWR < 0.45 ? 'Outcome data for this period is unfavorable. Operational judgment during late-window sessions is assessed as PROBABLY impaired.' : 'Late-window performance is within acceptable parameters. No corrective assessment warranted at this time.'}`,
+        `${lateNightGames.length} after-hours deployments on file (0000–0500). WR during this window: ${(lateWR * 100).toFixed(0)}%. ${lateWR < overallWR ? `A ${(((overallWR - lateWR) * 100).toFixed(0))}-point gap versus cell baseline suggests cognitive or coordination degradation. Analyst assessment: fatigue is PROBABLY a factor.` : 'Performance is stable relative to daytime operations. No evidence of impairment detected in this sample.'}`,
       ], 9)
       candidates.push({ weight: Math.abs(lateWR - overallWR) * 60 + lateNightGames.length, obs: {
         severity: lateWR < overallWR - 0.1 ? 'amber' : 'blue',
@@ -606,6 +753,7 @@ function computeCellStats(matches, cellPuuids, memberRoster = []) {
         const note = pickIdx([
           `Weekend WR: ${(weekendWR * 100).toFixed(0)}%. Weekday WR: ${(weekdayWR * 100).toFixed(0)}%. Cell performs measurably better on ${better}. ${better === 'weekends' ? 'Contributing factors — session length, roster availability, or fatigue reduction — have not been isolated.' : 'Destabilizing variables specific to the weekend window have not been identified. Pattern warrants continued monitoring.'}`,
           `${(Math.abs(weekendWR - weekdayWR) * 100).toFixed(0)}-point WR gap between weekends and weekdays. Variance is assessed as PROBABLY not incidental. Cell composition or scheduling factors are LIKELY contributors.`,
+          `Weekend operations: ${(weekendWR * 100).toFixed(0)}% WR (${weekendGames.length} games). Weekday: ${(weekdayWR * 100).toFixed(0)}%. The cell's ${better} advantage has held across the reporting window. Roster availability and session length are assessed as PROBABLE variables.`,
         ], 10)
         candidates.push({ weight: Math.abs(weekendWR - weekdayWR) * 80, obs: {
           severity: 'blue', title: 'TEMPORAL VARIANCE',
@@ -621,6 +769,7 @@ function computeCellStats(matches, cellPuuids, memberRoster = []) {
         const note = pickIdx([
           `${topCombo.champions.join(' + ')} deployed ${topCombo.games} times. WR: ${(topCombo.win_rate * 100).toFixed(0)}%. Composition recurrence suggests a default selection pattern. ${topCombo.win_rate > overallWR ? 'Outcomes support continued use. Analyst has no corrective assessment.' : 'Outcomes fall below cell baseline. Composition review is assessed as PROBABLY warranted.'}`,
           `Recorded ${topCombo.games} instances of ${topCombo.champions.join('/')} composition. WR: ${(topCombo.win_rate * 100).toFixed(0)}%. ${topCombo.win_rate > 0.55 ? 'Performance at this frequency is above threshold. Pattern is assessed as LOW risk.' : 'Performance at this frequency is below expectation. Composition flexibility is assessed as LIKELY a corrective lever.'}`,
+          `The ${topCombo.champions.join(' / ')} pairing has been fielded ${topCombo.games} times — the cell's most recurring composition. WR: ${(topCombo.win_rate * 100).toFixed(0)}%. ${topCombo.win_rate > overallWR ? 'Results justify the repetition. Continued use is assessed as PROBABLY optimal.' : 'Results do not support the frequency of deployment. Composition inertia is assessed as a PROBABLE liability.'}`,
         ], 11)
         candidates.push({ weight: topCombo.games * 3 + Math.abs(topCombo.win_rate - overallWR) * 50, obs: {
           severity: topCombo.win_rate > overallWR ? 'green' : 'amber',
@@ -639,6 +788,7 @@ function computeCellStats(matches, cellPuuids, memberRoster = []) {
       const note = pickIdx([
         `${flawless.length} deployment(s) on record in which all cell operators registered zero deaths and secured a victory. Execution in these instances exceeded standard performance benchmarks. Mechanism of consistency in non-flawless matches is undetermined.`,
         `Zero-casualty wins recorded: ${flawless.length}. All cell operators survived all engagements in these operations. Whether this reflects opponent quality, cell coordination, or situational variance has not been isolated. Pattern is noted for continued observation.`,
+        `${flawless.length} operation(s) concluded with a full sweep — victory secured, zero cell casualties recorded. These represent the cell's peak operational execution. Replication conditions have not been identified with confidence.`,
       ], 12)
       candidates.push({ weight: flawless.length * 20 + 10, obs: {
         severity: 'green', title: 'FLAWLESS OPERATION',

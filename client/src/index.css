@@ -1974,21 +1974,20 @@ footer.site-footer {
 
 /* ── Champion Pools (2-col grid layout) ── */
 .pools-card { margin-bottom: 16px; }
+.fun-card.pools-card { overflow: visible; }
 .fun-card { padding: 28px 30px; position: relative; overflow: hidden; display: flex; flex-direction: column; }
 .fun-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 2.5px; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; font-weight: 600; }
 .fun-title { font-family: var(--font-display); font-size: 24px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 5px; }
 .fun-subtitle { font-family: var(--font-mono); font-size: 11px; color: var(--muted); letter-spacing: 0.5px; margin-bottom: 20px; }
 .fun-body { flex: 1; }
 .pools-grid {
-  display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 0;
+  display: grid; grid-template-columns: 1fr; gap: 0;
 }
 .pool-row {
   padding: 18px 24px;
   border-bottom: 1px dashed var(--border-light);
-  border-right: 1px dashed var(--border-light);
 }
-.pool-row:nth-child(even) { border-right: none; }
-.pool-row:nth-last-child(-n+2) { border-bottom: none; }
+.pool-row:last-child { border-bottom: none; }
 .pool-header {
   display: flex; justify-content: space-between; align-items: center;
   margin-bottom: 9px; gap: 10px;
@@ -2004,15 +2003,31 @@ footer.site-footer {
   padding: 3px 8px; border-radius: 3px;
 }
 .pool-bar {
-  display: flex; height: 26px; border-radius: 3px; overflow: hidden;
-  border: 1px solid var(--border);
+  display: flex; height: 26px; border-radius: 3px; overflow: visible;
+  border: none;
 }
+.pool-bar .pool-seg:first-child { border-radius: 3px 0 0 3px; }
+.pool-bar .pool-seg:last-child { border-radius: 0 3px 3px 0; }
+.pool-bar .pool-seg:only-child { border-radius: 3px; }
 .pool-seg {
   display: flex; align-items: center; justify-content: center;
   font-family: var(--font-mono);
   font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
-  padding: 0 5px;
+  white-space: nowrap; min-width: 0;
+  padding: 0 5px; position: relative; cursor: default;
+  overflow: visible;
+}
+.pool-seg-label {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  display: block; min-width: 0;
+}
+.pool-seg:hover { z-index: 10; outline: 1px solid var(--text); outline-offset: -1px; }
+.pool-seg[data-tooltip]:hover::after {
+  content: attr(data-tooltip); position: absolute; bottom: calc(100% + 6px);
+  left: 50%; transform: translateX(-50%); background: var(--surface-dark);
+  color: var(--text-inverse); font-size: 10px; padding: 5px 10px; white-space: nowrap;
+  z-index: 30; border-radius: 4px; font-family: var(--font-mono);
+  pointer-events: none;
 }
 .pool-seg.hide-text { color: transparent !important; }
 .pool-note {
@@ -2031,6 +2046,26 @@ footer.site-footer {
 .pool-seg.s-4 { background: #a8a194; color: #1a1a1a; }
 .pool-seg.s-5 { background: #c8c3b8; color: #4a4439; }
 .pool-seg.s-empty { background: var(--surface); color: var(--muted); font-style: italic; }
+/* Theater sub-rows within champion pools */
+.pool-theater { margin-top: 10px; }
+.pool-theater:first-of-type { margin-top: 12px; }
+.pool-theater-header {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 4px;
+}
+.pool-theater-label {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+  letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase;
+}
+.pool-theater-games {
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--muted-light); letter-spacing: 0.5px;
+}
+.pool-theater-badge {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 1px;
+  font-weight: 600; padding: 1px 6px; border-radius: 3px; margin-left: auto;
+}
+.pool-bar-sm { height: 22px; }
 
 /* ── Sync button ── */
 .sync-btn {
@@ -2391,7 +2426,6 @@ footer.site-footer {
   .two-col { grid-template-columns: 1fr; }
   .analyst-row { grid-template-columns: 1fr; }
   .assessment-list { grid-template-columns: 1fr; }
-  .pools-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 800px) {

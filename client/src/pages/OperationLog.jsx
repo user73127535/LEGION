@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { api } from '../lib/api'
+import { MOCK_OPERATIONS, isMockCell } from '../lib/mockData'
 import AuthOverlay from '../components/AuthOverlay'
 import CellOverlay from '../components/CellOverlay'
 import Footer from '../components/Footer'
@@ -127,8 +128,12 @@ export default function OperationLog() {
     if (!cellId) return
     setLoading(true)
     try {
-      const data = await api.getOperationLog(cellId)
-      setOperations(data)
+      if (isMockCell(cellId)) {
+        setOperations(MOCK_OPERATIONS)
+      } else {
+        const data = await api.getOperationLog(cellId)
+        setOperations(data)
+      }
     } catch {
       setOperations(null)
     } finally {

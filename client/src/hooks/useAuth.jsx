@@ -1,10 +1,12 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { api } from '../lib/api'
+import { MOCK_USER, MOCK_CELLS, MOCK_ACTIVE_CELL } from '../lib/mockData'
 
 const AuthContext = createContext(null)
 
 const ACTIVE_CELL_KEY = 'legion_active_cell'
+const DEV_MOCK = import.meta.env.DEV
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
@@ -66,17 +68,26 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setLoading(false)
       if (session) {
+        setSession(session)
+        setLoading(false)
         linkRiotIdIfNeeded(session.user)
         fetchCells().then(restoreActiveCell)
+      } else if (DEV_MOCK) {
+        setSession({ user: MOCK_USER, access_token: 'mock' })
+        setCells(MOCK_CELLS)
+        setActiveCellState(MOCK_ACTIVE_CELL)
+        setLoading(false)
+        setCellsLoading(false)
       } else {
+        setSession(null)
+        setLoading(false)
         setCellsLoading(false)
       }
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!session && DEV_MOCK) return
       setSession(session)
       if (event === 'SIGNED_IN' && session?.user) {
         linkRiotIdIfNeeded(session.user)
@@ -95,7 +106,7 @@ export function AuthProvider({ children }) {
   // Re-validate session when the tab becomes visible again (e.g. after sleep)
   useEffect(() => {
     function handleVisibilityChange() {
-      if (document.visibilityState !== 'visible') return
+      if (document.visibilityState !== 'visible' || DEV_MOCK) return
       supabase.auth.getSession().then(({ data: { session: fresh } }) => {
         if (fresh) {
           setSession(fresh)

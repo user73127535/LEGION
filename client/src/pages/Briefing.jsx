@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { api } from '../lib/api'
+import { MOCK_STATS, isMockCell } from '../lib/mockData'
 import AuthOverlay from '../components/AuthOverlay'
 import CellOverlay from '../components/CellOverlay'
 import Footer from '../components/Footer'
@@ -105,7 +106,51 @@ function classifyPool(topChamps, totalGames) {
   return { label: 'ROLE-LOCKED', badgeClass: 'badge-amber' }
 }
 
-const POOL_SHADES = ['s-1', 's-2', 's-3', 's-4', 's-5']
+const THEATERS = ["SUMMONER'S RIFT", 'HOWLING ABYSS', 'RINGS OF WRATH']
+
+function pickShade(pct) {
+  if (pct >= 50) return 's-1'
+  if (pct >= 35) return 's-2'
+  if (pct >= 20) return 's-3'
+  if (pct >= 10) return 's-4'
+  return 's-5'
+}
+
+function renderPoolBar(champs, totalGames, uniqueCount) {
+  const shownChamps = champs.slice(0, 5)
+  const hiddenCount = (uniqueCount || champs.length) - shownChamps.length
+  if (totalGames === 0 || shownChamps.length === 0) {
+    return <div className="pool-seg s-empty" style={{ width: '100%' }}>NO FIELD DATA</div>
+  }
+  const rawPcts = shownChamps.map(c => (c.games / totalGames) * 100)
+  const pcts = rawPcts.map(p => Math.max(Math.round(p), 1))
+  const shownSum = pcts.reduce((a, b) => a + b, 0)
+  const remainder = Math.max(0, 100 - shownSum)
+  const hasRemainder = remainder > 0 && hiddenCount > 0
+  if (!hasRemainder) {
+    const scale = 100 / shownSum
+    pcts.forEach((_, i) => { pcts[i] = Math.round(pcts[i] * scale) })
+    const adj = 100 - pcts.reduce((a, b) => a + b, 0)
+    if (adj !== 0) pcts[0] += adj
+  }
+  return <>
+    {shownChamps.map((c, idx) => {
+      const segPct = Math.round((c.games / totalGames) * 100)
+      const shade = pickShade(segPct)
+      const wr = Math.round((c.win_rate ?? 0) * 100)
+      const tooltip = `${c.name} — ${segPct}% pick rate // ${wr}% WR (${c.wins ?? 0}W-${c.games - (c.wins ?? 0)}L)`
+      return (
+        <div key={c.name} className={`pool-seg ${shade}`}
+          style={{ width: `${pcts[idx]}%` }} data-tooltip={tooltip}><span className="pool-seg-label">{c.name.toUpperCase()}</span></div>
+      )
+    })}
+    {hasRemainder && (
+      <div className="pool-seg s-empty" style={{ width: `${remainder}%` }}>
+        {hiddenCount > 0 ? `+${hiddenCount} more` : ''}
+      </div>
+    )}
+  </>
+}
 
 /* ── Tilt Index segment coloring ── */
 function tiltSegClass(idx, score) {
@@ -222,8 +267,12 @@ export default function Briefing() {
     if (!cellId) return
     setLoading(true)
     try {
-      const data = await api.getCellStats(cellId)
-      setStats(data)
+      if (isMockCell(cellId)) {
+        setStats(MOCK_STATS)
+      } else {
+        const data = await api.getCellStats(cellId)
+        setStats(data)
+      }
     } catch {
       setStats(null)
     } finally {
@@ -818,60 +867,63 @@ export default function Briefing() {
         <div className="card fun-card pools-card intel-reveal reveal-d3">
           <div className="fun-label">&bull; Operator Profiles</div>
           <div className="fun-title">Champion Pools</div>
-          <div className="fun-subtitle">Champion selection patterns, by subject</div>
+          <div className="fun-subtitle">Champion selection patterns, by subject and theater</div>
           <div className="fun-body">
             <div className="pools-grid">
               {hasData && stats.operator_stats ? (
                 stats.operator_stats.map((op, opIdx) => {
                   const isYou = currentUserName && op.name?.toLowerCase() === currentUserName.toLowerCase()
-                  const champs = op.top_champions || []
                   const totalGames = op.games || 0
-                  const { label, badgeClass } = classifyPool(champs, totalGames)
+                  const allChamps = op.top_champions || []
 
-                  const shownChamps = champs.slice(0, 5)
-                  const uniqueTotal = op.unique_champions || champs.length
-                  const hiddenCount = uniqueTotal - shownChamps.length
-                  const topChamp = shownChamps[0]
-                  const topPct = topChamp ? Math.round((topChamp.games / totalGames) * 100) : 0
+                  const activeTheaters = THEATERS.filter(t => op.theaters?.[t]?.games > 0)
+                  const theaterClassifs = activeTheaters.map(t => classifyPool(op.theaters[t].top_champions, op.theaters[t].games))
 
-                  const chaoticStrongs = [
-                    `${uniqueTotal} champions across ${totalGames} matches. No pattern detected.`,
-                    `${uniqueTotal} unique picks in ${totalGames} deployments. No dominant selection.`,
-                    `${uniqueTotal} champions rotated across ${totalGames} engagements. Pool entropy: high.`,
-                    `${uniqueTotal} picks filed across ${totalGames} deployments. Selection: erratic.`,
-                    `${uniqueTotal} unique selections logged. Distribution spread across ${totalGames} engagements.`,
+                  const bestChamp = allChamps[0]
+                  const bestWrChamp = allChamps.filter(c => c.games >= 3).sort((a, b) => b.win_rate - a.win_rate)[0]
+                  const opSeed = (op.name || '').split('').reduce((s, c) => s * 31 + c.charCodeAt(0), 0) >>> 0
+
+                  const strongTemplates = [
+                    () => `${allChamps.length} champion${allChamps.length !== 1 ? 's' : ''} on file across ${activeTheaters.length} theater${activeTheaters.length !== 1 ? 's' : ''}.`,
+                    () => bestChamp ? `Primary asset: ${bestChamp.name}. ${allChamps.length} unique selections recorded.` : `${allChamps.length} selections on file.`,
+                    () => `${totalGames} joint deployments surveyed. ${allChamps.length} distinct champion selections catalogued.`,
+                    () => bestChamp ? `${bestChamp.name} leads deployment frequency. ${allChamps.length - 1} alternate${allChamps.length > 2 ? 's' : ''} on record.` : 'No dominant selection pattern identified.',
+                    () => activeTheaters.length >= 2 ? `Selection data spans ${activeTheaters.length} theaters. ${allChamps.length} champions indexed.` : `All ${totalGames} deployments confined to ${activeTheaters[0] || 'a single theater'}.`,
                   ]
-                  const chaoticTexts = [
-                    'Selection methodology undetermined. Per-champion mastery: marginal.',
-                    'No repeatable pattern observed. Operator adapts picks to team composition or mood — unclear which.',
-                    'Champion rotation appears random within role constraints. Mastery depth: inconclusive.',
-                    'Pick behavior defies categorization. No loyalty to any single champion detected.',
-                    'Operator exhibits no discernible pick priority. Situational adaptation suspected but unconfirmed.',
+
+                  const textTemplates = [
+                    () => bestWrChamp ? `Highest-WR asset: ${bestWrChamp.name} at ${Math.round(bestWrChamp.win_rate * 100)}% across ${bestWrChamp.games} deployments. ${bestChamp && bestChamp.name !== bestWrChamp.name ? `Most fielded: ${bestChamp.name} (${bestChamp.games} ops).` : 'Also the most fielded selection.'}` : 'Insufficient data for performance ranking.',
+                    () => {
+                      const labels = theaterClassifs.map(c => c.label)
+                      const unique = [...new Set(labels)]
+                      return unique.length > 1
+                        ? `Classification shifts across theaters: ${unique.join(', ')}. Operator modifies selection doctrine by map environment.`
+                        : unique.length === 1
+                        ? `Uniform ${unique[0]} classification across all active theaters. No adaptive deviation detected.`
+                        : 'Theater-level classification pending additional data.'
+                    },
+                    () => bestChamp ? `${bestChamp.name} deployed ${bestChamp.games} times (${Math.round(bestChamp.win_rate * 100)}% WR). ${bestChamp.win_rate >= 0.55 ? 'Outcomes support continued prioritization.' : bestChamp.win_rate < 0.45 ? 'Outcome data for this selection is unfavorable. Review warranted.' : 'Performance within expected parameters.'}` : 'No deployment data on file.',
+                    () => {
+                      const oneTricks = theaterClassifs.filter(c => c.label === 'ONE-TRICK')
+                      if (oneTricks.length > 0) return `ONE-TRICK classification detected in ${oneTricks.length} theater${oneTricks.length > 1 ? 's' : ''}. Ban-phase vulnerability is assessed as ELEVATED. Pool depth: LIMITED.`
+                      const chaotics = theaterClassifs.filter(c => c.label === 'CHAOTIC')
+                      if (chaotics.length > 0) return `CHAOTIC classification in ${chaotics.length} theater${chaotics.length > 1 ? 's' : ''}. Per-champion mastery depth: INCONCLUSIVE. Selection methodology undetermined.`
+                      return bestWrChamp && bestWrChamp.win_rate >= 0.6 ? `${bestWrChamp.name} represents a high-value asset at ${Math.round(bestWrChamp.win_rate * 100)}% WR. Continued deployment recommended.` : 'No performance anomaly flagged. Surveillance continues.'
+                    },
+                    () => {
+                      if (activeTheaters.length === 1) return `Operational range limited to ${activeTheaters[0]}. Cross-theater assessment: NOT POSSIBLE with current dataset.`
+                      const bestTheater = activeTheaters.reduce((a, b) => (op.theaters[a]?.win_rate ?? 0) > (op.theaters[b]?.win_rate ?? 0) ? a : b)
+                      const btWr = Math.round((op.theaters[bestTheater]?.win_rate ?? 0) * 100)
+                      return `Strongest theater: ${bestTheater} (${btWr}% WR). ${bestChamp ? `${bestChamp.name} remains the primary selection across environments.` : 'No dominant pick identified.'}`
+                    },
                   ]
-                  const opSeed = (op.name || '').split('').reduce((s, c, i) => s * 31 + c.charCodeAt(0), 0) >>> 0
 
                   const noteStrong = totalGames < 5
                     ? `${totalGames} matches recorded. Sample below threshold.`
-                    : label === 'ONE-TRICK' && topChamp
-                    ? `${champs.length} champion${champs.length !== 1 ? 's' : ''} on file. Functionally one.`
-                    : label === 'CHAOTIC'
-                    ? chaoticStrongs[opIdx % chaoticStrongs.length]
-                    : topChamp
-                    ? `${champs.length} champion${champs.length !== 1 ? 's' : ''} on file. ${topChamp.name} in ${topPct}% of deployments.`
-                    : 'No champion data on file.'
+                    : strongTemplates[opSeed % strongTemplates.length]()
                   const noteText = totalGames < 5
                     ? 'Profile pending additional deployments.'
-                    : label === 'ONE-TRICK'
-                    ? `${topChamp?.name} in ${topPct}% of recorded matches. Reversion observed within two matches of any deviation. Specialist profile assessed with HIGH CONFIDENCE.`
-                    : label === 'CHAOTIC'
-                    ? chaoticTexts[(opIdx + 2) % chaoticTexts.length]
-                    : label === 'INCONCLUSIVE'
-                    ? 'Profile pending additional deployments.'
-                    : label === 'NARROW'
-                    ? 'Secondary picks selected only when primary is unavailable. No deviation observed under cell-internal pressure.'
-                    : label === 'SPECIALIST'
-                    ? `Secondary picks selected only when ${topChamp?.name || 'primary'} is banned. Role: fixed. No deviation observed.`
-                    : `No off-lane deployments observed. Team composition adjusts to accommodate.`
+                    : textTemplates[(opSeed + 2) % textTemplates.length]()
 
                   return (
                     <div key={op.puuid} className="pool-row">
@@ -880,62 +932,25 @@ export default function Briefing() {
                           {op.name}
                           {isYou && <span className="cm-you-tag">YOU</span>}
                         </span>
-                        <span className={`pool-class badge ${badgeClass}`}>{label}</span>
                       </div>
-                      <div className="pool-bar">
-                        {totalGames < 5 ? (
-                          <div className="pool-seg s-empty" style={{ width: '100%' }}>
-                            INSUFFICIENT DATA &mdash; {totalGames} MATCHES
+                      {THEATERS.map(theater => {
+                        const td = op.theaters?.[theater] || { games: 0, top_champions: [], unique_champions: 0 }
+                        const tGames = td.games || 0
+                        const tChamps = td.top_champions || []
+                        const { label: tLabel, badgeClass: tBadge } = classifyPool(tChamps, tGames)
+                        return (
+                          <div key={theater} className="pool-theater">
+                            <div className="pool-theater-header">
+                              <span className="pool-theater-label">{theater}</span>
+                              <span className="pool-theater-games">{tGames} OPS</span>
+                              <span className={`pool-theater-badge badge ${tBadge}`}>{tLabel}</span>
+                            </div>
+                            <div className="pool-bar pool-bar-sm">
+                              {renderPoolBar(tChamps, tGames, td.unique_champions)}
+                            </div>
                           </div>
-                        ) : shownChamps.length === 0 ? (
-                          <div className="pool-seg s-empty" style={{ width: '100%' }}>NO DATA</div>
-                        ) : (
-                          (() => {
-                            const rawPcts = shownChamps.map(c => (c.games / totalGames) * 100)
-                            const pcts = rawPcts.map(p => Math.max(Math.round(p), 1))
-                            const shownSum = pcts.reduce((a, b) => a + b, 0)
-                            const remainder = Math.max(0, 100 - shownSum)
-                            const hasRemainder = remainder > 0 && hiddenCount > 0
-                            if (!hasRemainder) {
-                              const scale = 100 / shownSum
-                              pcts.forEach((_, i) => { pcts[i] = Math.round(pcts[i] * scale) })
-                              const adj = 100 - pcts.reduce((a, b) => a + b, 0)
-                              if (adj !== 0) pcts[0] += adj
-                            }
-                            return <>
-                              {shownChamps.map((c, idx) => {
-                                const shade = POOL_SHADES[idx] || 's-5'
-                                const hideText = idx > 0 && pcts[idx] < 8
-                                const segPct = Math.round((c.games / totalGames) * 100)
-                                const shortName = c.name.length <= 5 ? c.name.toUpperCase() : c.name.slice(0, 4).toUpperCase()
-                                let label
-                                if (idx === 0) {
-                                  label = pcts[idx] >= 25 ? `${c.name.toUpperCase()} ${segPct}%` : c.name.toUpperCase()
-                                } else {
-                                  label = shortName
-                                }
-                                return (
-                                  <div
-                                    key={c.name}
-                                    className={`pool-seg ${shade}${hideText ? ' hide-text' : ''}`}
-                                    style={{ width: `${pcts[idx]}%` }}
-                                  >
-                                    {label}
-                                  </div>
-                                )
-                              })}
-                              {hasRemainder && (
-                                <div
-                                  className="pool-seg s-empty"
-                                  style={{ width: `${remainder}%` }}
-                                >
-                                  {hiddenCount > 0 ? `+${hiddenCount} more` : ''}
-                                </div>
-                              )}
-                            </>
-                          })()
-                        )}
-                      </div>
+                        )
+                      })}
                       <div className="pool-note">
                         <strong>{noteStrong}</strong>
                         {noteText}
@@ -948,11 +963,17 @@ export default function Briefing() {
                   <div key={i} className="pool-row">
                     <div className="pool-header">
                       <span className="pool-name"><R w={w} h={14} /></span>
-                      <span className="pool-class badge badge-blue"><R w={60} h={10} /></span>
                     </div>
-                    <div className="pool-bar">
-                      <RedactedBar w="100%" h={26} />
-                    </div>
+                    {THEATERS.map(t => (
+                      <div key={t} className="pool-theater">
+                        <div className="pool-theater-header">
+                          <span className="pool-theater-label"><R w={100} h={10} /></span>
+                        </div>
+                        <div className="pool-bar pool-bar-sm">
+                          <RedactedBar w="100%" h={22} />
+                        </div>
+                      </div>
+                    ))}
                     <div className="pool-note" style={{ marginTop: 10 }}>
                       <RedactedBar w="80%" h={10} />
                     </div>
