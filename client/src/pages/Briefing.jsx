@@ -509,7 +509,7 @@ export default function Briefing() {
                   stats.recent_form.slice(0, 10).map((g, i) => (
                     <div
                       key={i}
-                      className={`form-box ${g.win ? 'w' : 'l'}${i === stats.recent_form.length - 1 ? ' latest' : ''}`}
+                      className={`form-box ${g.win ? 'w' : 'l'}${i === 0 ? ' latest' : ''}`}
                     >
                       {g.win ? 'W' : 'L'}
                     </div>
