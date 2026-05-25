@@ -115,6 +115,8 @@ export default function OperationLog() {
   const { user, activeCell } = useAuth()
   const [operations, setOperations] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [syncResult, setSyncResult] = useState(null)
   const [filterMode, setFilterMode] = useState('All')
   const [filterOutcome, setFilterOutcome] = useState('All')
   const [filterScope, setFilterScope] = useState('full')
@@ -145,6 +147,21 @@ export default function OperationLog() {
     if (hasCell) fetchOps()
     else setOperations(null)
   }, [hasCell, fetchOps])
+
+  async function handleSync() {
+    if (!cellId || syncing) return
+    setSyncing(true)
+    setSyncResult(null)
+    try {
+      const result = await api.ingestMatches(cellId)
+      setSyncResult(result)
+      await fetchOps()
+    } catch (err) {
+      setSyncResult({ status: 'ERROR', message: err.message })
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   const allOperatorNames = [...new Set(
     (operations ?? []).flatMap((op) => op.participants.map((p) => p.name)).filter(Boolean)
@@ -248,9 +265,28 @@ export default function OperationLog() {
                 : <R w={90} h={11} />}</strong>
               <span className="meta-divider">//</span>
               case <strong>LGN-<R w={36} h={11} /></strong>
-              <span className="meta-divider">//</span>
-              <span className="sync-meta">last synced <span>3</span>s ago</span>
+              {hasCell && (
+                <>
+                  <span className="meta-divider">//</span>
+                  <button
+                    className="recruit-btn"
+                    onClick={handleSync}
+                    disabled={syncing}
+                  >
+                    {syncing ? 'SYNCING...' : '+ Sync Intel'}
+                  </button>
+                </>
+              )}
             </div>
+            {syncResult && (
+              <div className="sync-result">
+                {syncResult.status === 'ERROR'
+                  ? `SYNC FAILED: ${syncResult.message}`
+                  : syncResult.remaining > 0
+                  ? `INGEST IN PROGRESS — ${syncResult.fetched ?? 0} new matches filed, ${syncResult.remaining} pending. Sync again to continue.`
+                  : `INGEST COMPLETE — ${syncResult.fetched ?? 0} new matches filed, ${syncResult.skipped ?? 0} already on record`}
+              </div>
+            )}
           </div>
         </div>
       </div>
