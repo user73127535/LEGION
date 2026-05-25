@@ -163,9 +163,21 @@ export default function OperationLog() {
     }
   }
 
-  const allOperatorNames = [...new Set(
-    (operations ?? []).flatMap((op) => op.participants.map((p) => p.name)).filter(Boolean)
-  )].sort()
+  // Build operator list sorted by win rate (highest first)
+  const allOperatorNames = (() => {
+    const opMap = {}
+    for (const op of (operations ?? [])) {
+      for (const p of op.participants) {
+        if (!p.name) continue
+        if (!opMap[p.name]) opMap[p.name] = { wins: 0, games: 0 }
+        opMap[p.name].games++
+        if (op.result === 'WIN') opMap[p.name].wins++
+      }
+    }
+    return Object.entries(opMap)
+      .sort(([, a], [, b]) => (b.games > 0 ? b.wins / b.games : 0) - (a.games > 0 ? a.wins / a.games : 0) || b.games - a.games)
+      .map(([name]) => name)
+  })()
 
   useEffect(() => {
     if (allOperatorNames.length > 0 && activeOperators === null) {
@@ -453,7 +465,7 @@ export default function OperationLog() {
                         </tr>
                       </thead>
                       <tbody>
-                        {op.participants.map((p, pi) => (
+                        {[...op.participants].sort((a, b) => allOperatorNames.indexOf(a.name) - allOperatorNames.indexOf(b.name)).map((p, pi) => (
                           <tr key={pi}>
                             <td className={`op-name${p.name === currentUserName ? ' you' : ''}`}>
                               {p.name}

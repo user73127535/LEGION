@@ -88,27 +88,25 @@ export const MOCK_STATS = {
       last_played: Date.now() - 86400000,
     },
     {
-      puuid: PU.cat, user_id: 'mock-user-2', name: 'iHazACatz',
-      games: 55, wins: 28, win_rate: 0.509,
-      wr_without: 0.563,
+      puuid: PU.pin, user_id: 'mock-user-4', name: 'Pin Pon',
+      games: 50, wins: 27, win_rate: 0.540,
+      wr_without: 0.541,
       top_champions: opChamps([
-        ['Yuumi', 28, 13], ['Lulu', 9, 5], ['Janna', 6, 4],
-        ['Sona', 5, 3], ['Nami', 4, 2],
+        ['Garen', 18, 11], ['Darius', 12, 6], ['Mordekaiser', 8, 4],
+        ['Sett', 4, 2], ['Illaoi', 3, 2],
       ]),
-      unique_champions: 8,
+      unique_champions: 9,
       theaters: {
-        "SUMMONER'S RIFT": theaterEntry(22, 11, [
-          ['Yuumi', 16, 8], ['Lulu', 3, 2], ['Janna', 2, 1], ['Nami', 1, 0],
+        "SUMMONER'S RIFT": theaterEntry(45, 25, [
+          ['Garen', 17, 10], ['Darius', 12, 6], ['Mordekaiser', 8, 4],
+          ['Sett', 4, 2], ['Illaoi', 3, 2],
         ]),
-        'HOWLING ABYSS': theaterEntry(30, 15, [
-          ['Yuumi', 12, 5], ['Lulu', 6, 3], ['Sona', 5, 3],
-          ['Janna', 4, 3], ['Nami', 3, 1],
+        'HOWLING ABYSS': theaterEntry(5, 2, [
+          ['Garen', 2, 1], ['Darius', 2, 1], ['Mordekaiser', 1, 0],
         ]),
-        'RINGS OF WRATH': theaterEntry(3, 2, [
-          ['Yuumi', 2, 1], ['Lulu', 1, 1],
-        ]),
+        'RINGS OF WRATH': theaterEntry(0, 0, []),
       },
-      last_played: Date.now() - 172800000,
+      last_played: Date.now() - 259200000,
     },
     {
       puuid: PU.cos, user_id: 'mock-user-3', name: 'Coslett',
@@ -135,27 +133,6 @@ export const MOCK_STATS = {
       last_played: Date.now() - 43200000,
     },
     {
-      puuid: PU.pin, user_id: 'mock-user-4', name: 'Pin Pon',
-      games: 50, wins: 27, win_rate: 0.540,
-      wr_without: 0.541,
-      top_champions: opChamps([
-        ['Garen', 18, 11], ['Darius', 12, 6], ['Mordekaiser', 8, 4],
-        ['Sett', 4, 2], ['Illaoi', 3, 2],
-      ]),
-      unique_champions: 9,
-      theaters: {
-        "SUMMONER'S RIFT": theaterEntry(45, 25, [
-          ['Garen', 17, 10], ['Darius', 12, 6], ['Mordekaiser', 8, 4],
-          ['Sett', 4, 2], ['Illaoi', 3, 2],
-        ]),
-        'HOWLING ABYSS': theaterEntry(5, 2, [
-          ['Garen', 2, 1], ['Darius', 2, 1], ['Mordekaiser', 1, 0],
-        ]),
-        'RINGS OF WRATH': theaterEntry(0, 0, []),
-      },
-      last_played: Date.now() - 259200000,
-    },
-    {
       puuid: PU.lyu, user_id: 'mock-user-5', name: 'lyu',
       games: 45, wins: 24, win_rate: 0.533,
       wr_without: 0.548,
@@ -177,6 +154,29 @@ export const MOCK_STATS = {
         ]),
       },
       last_played: Date.now() - 518400000,
+    },
+    {
+      puuid: PU.cat, user_id: 'mock-user-2', name: 'iHazACatz',
+      games: 55, wins: 28, win_rate: 0.509,
+      wr_without: 0.563,
+      top_champions: opChamps([
+        ['Yuumi', 28, 13], ['Lulu', 9, 5], ['Janna', 6, 4],
+        ['Sona', 5, 3], ['Nami', 4, 2],
+      ]),
+      unique_champions: 8,
+      theaters: {
+        "SUMMONER'S RIFT": theaterEntry(22, 11, [
+          ['Yuumi', 16, 8], ['Lulu', 3, 2], ['Janna', 2, 1], ['Nami', 1, 0],
+        ]),
+        'HOWLING ABYSS': theaterEntry(30, 15, [
+          ['Yuumi', 12, 5], ['Lulu', 6, 3], ['Sona', 5, 3],
+          ['Janna', 4, 3], ['Nami', 3, 1],
+        ]),
+        'RINGS OF WRATH': theaterEntry(3, 2, [
+          ['Yuumi', 2, 1], ['Lulu', 1, 1],
+        ]),
+      },
+      last_played: Date.now() - 172800000,
     },
   ],
 

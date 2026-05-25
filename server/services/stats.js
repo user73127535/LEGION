@@ -262,7 +262,7 @@ function computeCellStats(matches, cellPuuids, memberRoster = []) {
       theaters,
       last_played: op.lastPlayed || null,
     }
-  }).sort((a, b) => b.games - a.games)
+  }).sort((a, b) => b.win_rate - a.win_rate || b.games - a.games)
 
   // Ensure every rostered cell member appears, even with 0 joint games or no PUUID
   const seenPuuids = new Set(operator_stats.map((o) => o.puuid))
