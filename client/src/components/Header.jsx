@@ -147,6 +147,7 @@ export default function Header() {
                       >
                         <div className="cs-cell-name">
                           {cell.name}
+                          {isHandler && <span className="cs-handler-badge">HANDLER</span>}
                           {activeCell?.id === cell.id && <span className="cs-cell-check">&#10003;</span>}
                         </div>
                         <div className="cs-cell-meta">
