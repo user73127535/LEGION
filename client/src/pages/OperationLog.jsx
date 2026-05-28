@@ -76,14 +76,12 @@ function formatDamage(dmg) {
   return String(dmg)
 }
 
-// 5-tier color for win-rate values (0-1 fraction)
+// Win-rate accent color: green above 50%, red below, neutral at 50%
 function wrAccentColor(rate) {
   if (rate == null) return 'var(--muted)'
-  if (rate >= 0.62) return 'var(--green)'
-  if (rate > 0.50) return '#16a34a'
-  if (rate === 0.50) return 'var(--muted)'
-  if (rate >= 0.40) return 'var(--red-mid)'
-  return 'var(--red)'
+  if (rate > 0.50) return 'var(--green)'
+  if (rate < 0.50) return 'var(--red)'
+  return 'var(--muted)'
 }
 
 const STAPLE_MODES = ['Ranked', 'Ranked Flex', 'Normal', 'ARAM', 'ARAM Mayhem', 'Arena']
@@ -330,7 +328,7 @@ export default function OperationLog() {
           <div className="summary-card">
             <div className="summary-card-accent" style={{ background: 'var(--green)' }} />
             <div className="summary-label">Total Wins</div>
-            <div className="summary-value">
+            <div className="summary-value" style={{ color: 'var(--green)' }}>
               {hasData ? totalWins : <R w={60} h={36} />}
             </div>
             <div className="summary-sub">
