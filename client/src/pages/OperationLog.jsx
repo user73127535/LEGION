@@ -76,6 +76,16 @@ function formatDamage(dmg) {
   return String(dmg)
 }
 
+// 5-tier color for win-rate values (0-1 fraction)
+function wrAccentColor(rate) {
+  if (rate == null) return 'var(--muted)'
+  if (rate >= 0.62) return 'var(--green)'
+  if (rate > 0.50) return '#16a34a'
+  if (rate === 0.50) return 'var(--muted)'
+  if (rate >= 0.40) return 'var(--red-mid)'
+  return 'var(--red)'
+}
+
 const STAPLE_MODES = ['Ranked', 'Ranked Flex', 'Normal', 'ARAM', 'ARAM Mayhem', 'Arena']
 
 function resolveMode(gameMode, queueId) {
@@ -308,9 +318,9 @@ export default function OperationLog() {
         {/* ── SUMMARY STRIP ── */}
         <div className="summary-strip intel-stagger">
           <div className="summary-card">
-            <div className="summary-card-accent" style={{ background: 'var(--green)' }} />
+            <div className="summary-card-accent" style={{ background: hasData ? wrAccentColor(jointWR) : 'var(--muted)' }} />
             <div className="summary-label">Joint Win Rate</div>
-            <div className="summary-value val-green">
+            <div className="summary-value" style={hasData ? { color: wrAccentColor(jointWR) } : undefined}>
               {hasData ? `${(jointWR * 100).toFixed(1)}%` : <R w={100} h={36} />}
             </div>
             <div className="summary-sub">
@@ -318,7 +328,7 @@ export default function OperationLog() {
             </div>
           </div>
           <div className="summary-card">
-            <div className="summary-card-accent" style={{ background: 'var(--text)' }} />
+            <div className="summary-card-accent" style={{ background: 'var(--green)' }} />
             <div className="summary-label">Total Wins</div>
             <div className="summary-value">
               {hasData ? totalWins : <R w={60} h={36} />}
