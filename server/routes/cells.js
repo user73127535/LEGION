@@ -118,9 +118,24 @@ router.get('/', requireAuth, async (req, res) => {
     }, {})
   }
 
+  // Resolve handler names from operators table
+  const handlerIds = [...new Set((data ?? []).map((row) => row.cells?.created_by).filter(Boolean))]
+  let handlerMap = {}
+  if (handlerIds.length > 0) {
+    const { data: handlerRows } = await sb
+      .from('operators')
+      .select('user_id, riot_game_name')
+      .in('user_id', handlerIds)
+    handlerMap = (handlerRows ?? []).reduce((acc, row) => {
+      acc[row.user_id] = row.riot_game_name || 'UNKNOWN'
+      return acc
+    }, {})
+  }
+
   const cells = (data ?? []).map((row) => ({
     ...row.cells,
     member_count: countMap[row.cells?.id] || 0,
+    handler_name: handlerMap[row.cells?.created_by] || 'UNKNOWN',
   }))
 
   res.json(cells)
