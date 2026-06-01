@@ -325,15 +325,23 @@ export default function Briefing() {
     if (!hasData || !stats.operator_stats) return null
     const ops = stats.operator_stats
     const n = ops.length
-    // Build lookup from duo_stats
+    // Build lookup from duo_stats — keyed by PUUID (name-change-proof), name fallback
     const lookup = {}
     if (stats.duo_stats) {
       stats.duo_stats.forEach(d => {
-        const key1 = `${d.names?.[0]}|${d.names?.[1]}`
-        const key2 = `${d.names?.[1]}|${d.names?.[0]}`
         const wr = d.win_rate <= 1 ? d.win_rate * 100 : d.win_rate
-        lookup[key1] = { wr, games: d.games }
-        lookup[key2] = { wr, games: d.games }
+        const val = { wr, games: d.games }
+        // PUUID keys (permanent — survives name changes)
+        if (d.puuids?.[0] && d.puuids?.[1]) {
+          lookup[`${d.puuids[0]}|${d.puuids[1]}`] = val
+          lookup[`${d.puuids[1]}|${d.puuids[0]}`] = val
+        }
+        // Name keys (fallback for display-only / mock data)
+        const n0 = d.names?.[0], n1 = d.names?.[1]
+        if (n0 && n1) {
+          lookup[`${n0}|${n1}`] = val
+          lookup[`${n1}|${n0}`] = val
+        }
       })
     }
     const codes = ops.map(op => op.name.slice(0, 3).toUpperCase())
@@ -781,8 +789,8 @@ export default function Briefing() {
                             <div key={`cell-${ri}-${ci}`} className="matrix-cell matrix-self">—</div>
                           )
                         }
-                        const key = `${rowOp.name}|${colOp.name}`
-                        const entry = matrixData.lookup[key]
+                        const entry = matrixData.lookup[`${rowOp.puuid}|${colOp.puuid}`]
+                          || matrixData.lookup[`${rowOp.name}|${colOp.name}`]
                         const wr = entry?.wr ?? null
                         const games = entry?.games ?? 0
                         const cellClass = matrixCellClass(wr, games)
