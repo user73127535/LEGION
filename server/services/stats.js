@@ -813,13 +813,17 @@ function computeCellStats(matches, cellPuuids, memberRoster = []) {
     })
   }
 
-  // Pick 2 random positions (0-5) for redacted slots
+  // Pick 1-3 random positions (0-5) for redacted slots
+  // Count varies by seed so it feels different each time data changes
+  const redactedCount_target = (seed % 3) + 1 // 1, 2, or 3
   const redactedPositions = new Set()
   redactedPositions.add(seed % 6)
-  redactedPositions.add((seed * 3 + 2) % 6)
-  // Ensure we have exactly 2 distinct positions
-  while (redactedPositions.size < 2) {
-    redactedPositions.add((seed * 7 + redactedPositions.size) % 6)
+  if (redactedCount_target >= 2) redactedPositions.add((seed * 3 + 2) % 6)
+  if (redactedCount_target >= 3) redactedPositions.add((seed * 5 + 4) % 6)
+  // Ensure we hit the target count with distinct positions
+  let attempt = 0
+  while (redactedPositions.size < redactedCount_target) {
+    redactedPositions.add((seed * 7 + attempt++) % 6)
   }
 
   // Build final 6-slot array

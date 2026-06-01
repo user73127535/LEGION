@@ -265,17 +265,17 @@ export const MOCK_STATS = {
       note: 'jimmmaaayyy + iHazACatz record a 57.9% WR across 38 joint deployments — 5 points above cell baseline. Jhin/Yuumi composition accounts for 8 of these with 75% WR. Pair synergy is assessed as ALMOST CERTAINLY a stabilizing factor.',
     },
     {
-      code: 'OBS-02', severity: 'black', title: null, subject: null, note: null, redacted: true, redactedVariant: 0,
-    },
-    {
-      code: 'OBS-03', severity: 'amber', title: 'ONE-TRICK EXPOSURE',
+      code: 'OBS-02', severity: 'amber', title: 'ONE-TRICK EXPOSURE',
       subject: 'iHazACatz / Yuumi',
       note: 'iHazACatz fields Yuumi in 51% of recorded joint deployments. Champion pool depth is assessed as LOW. Ban-phase exposure is assessed as ALMOST CERTAINLY a recurring vulnerability.',
     },
     {
-      code: 'OBS-04', severity: 'blue', title: 'THEATER DIVERGENCE',
+      code: 'OBS-03', severity: 'blue', title: 'THEATER DIVERGENCE',
       subject: 'lyu — cross-map pool split',
       note: "Champion selection by lyu diverges sharply between theaters. SUMMONER'S RIFT: Vayne; HOWLING ABYSS: Ziggs; RINGS OF WRATH: Samira. Overlap coefficient: 8%. Analyst assesses this as a DELIBERATE adaptation to map geometry rather than incidental variance.",
+    },
+    {
+      code: 'OBS-04', severity: 'black', title: null, subject: null, note: null, redacted: true, redactedVariant: 0,
     },
     {
       code: 'OBS-05', severity: 'amber', title: 'THEATER SPECIALIST',
@@ -283,7 +283,9 @@ export const MOCK_STATS = {
       note: "90% of Pin Pon's joint deployments occur on SUMMONER'S RIFT. 45 of 50 recorded operations confined to a single theater. Cross-map versatility is assessed as UNTESTED.",
     },
     {
-      code: 'OBS-06', severity: 'black', title: null, subject: null, note: null, redacted: true, redactedVariant: 1,
+      code: 'OBS-06', severity: 'red', title: 'COMPATIBILITY CONCERN',
+      subject: 'Pin Pon + iHazACatz',
+      note: 'Pair WR of 46% falls 7 points below cell baseline. Champion overlap inconsistent. Reintroduction to joint operations has not produced improvement. Pattern is assessed as LIKELY structural.',
     },
   ],
 }
