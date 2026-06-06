@@ -73,7 +73,8 @@ router.post('/link', requireAuth, async (req, res) => {
       if (err.message === 'NOT_FOUND') {
         return res.status(404).json({ error: 'OPERATOR NOT FOUND IN RIOT RECORDS' })
       }
-      return res.status(502).json({ error: `RIOT API UNAVAILABLE: ${err.message}` })
+      console.error('[LEGION] Riot API error during link:', err.message)
+      return res.status(502).json({ error: 'RIOT API UNAVAILABLE. TRY AGAIN SHORTLY.' })
     }
 
     const { data: existing } = await sb
@@ -100,7 +101,10 @@ router.post('/link', requireAuth, async (req, res) => {
       .select()
       .single()
 
-    if (error) return res.status(500).json({ error: error.message })
+    if (error) {
+      console.error('[LEGION] DB error during operator link:', error.message)
+      return res.status(500).json({ error: 'DATABASE ERROR. CONTACT HANDLER.' })
+    }
     res.json(data)
   } catch (crash) {
     console.error('[LEGION] operators/link CRASH:', crash)

@@ -101,7 +101,10 @@ router.get('/', requireAuth, async (req, res) => {
     .select('cell_id, cells(id, name, invite_code, created_at, created_by)')
     .eq('user_id', req.user.id)
 
-  if (error) return res.status(500).json({ error: error.message })
+  if (error) {
+    console.error('[LEGION] DB error listing cells:', error.message)
+    return res.status(500).json({ error: 'DATABASE ERROR' })
+  }
 
   // Get member counts in a single query instead of one per cell (N+1 fix)
   const cellIds = (data ?? []).map((row) => row.cells?.id).filter(Boolean)
@@ -155,7 +158,10 @@ router.post('/', requireAuth, async (req, res) => {
     .select()
     .single()
 
-  if (cellError) return res.status(500).json({ error: cellError.message })
+  if (cellError) {
+    console.error('[LEGION] DB error creating cell:', cellError.message)
+    return res.status(500).json({ error: 'DATABASE ERROR' })
+  }
 
   // Auto-add creator as member
   await sb
@@ -245,7 +251,8 @@ router.post('/join-by-code', requireAuth, async (req, res) => {
     .insert({ cell_id: cell.id, user_id: req.user.id })
 
   if (insertError) {
-    return res.status(500).json({ error: insertError.message })
+    console.error('[LEGION] DB error joining cell:', insertError.message)
+    return res.status(500).json({ error: 'DATABASE ERROR' })
   }
 
   res.json({ cell_id: cell.id, cell_name: cell.name, status: 'OPERATOR ADDED TO CELL' })
@@ -293,7 +300,10 @@ router.delete('/:id/members/:userId', requireAuth, async (req, res) => {
     .eq('cell_id', req.params.id)
     .eq('user_id', req.params.userId)
 
-  if (error) return res.status(500).json({ error: error.message })
+  if (error) {
+    console.error('[LEGION] DB error removing operator:', error.message)
+    return res.status(500).json({ error: 'DATABASE ERROR' })
+  }
   res.json({ status: 'OPERATOR REMOVED FROM CELL' })
 })
 
@@ -317,7 +327,10 @@ router.delete('/:id', requireAuth, async (req, res) => {
   await sb.from('cell_members').delete().eq('cell_id', cell.id)
   const { error } = await sb.from('cells').delete().eq('id', cell.id)
 
-  if (error) return res.status(500).json({ error: error.message })
+  if (error) {
+    console.error('[LEGION] DB error dissolving cell:', error.message)
+    return res.status(500).json({ error: 'DATABASE ERROR' })
+  }
   res.json({ status: 'CELL DISSOLVED' })
 })
 

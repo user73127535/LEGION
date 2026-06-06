@@ -9,7 +9,7 @@ const MOCK_CELL_ID = 'mock-zoo-2'
 
 export const MOCK_USER = {
   id: 'mock-user-1',
-  email: 'xample515@gmail.com',
+  email: 'operator@example.com',
   user_metadata: {
     riot_game_name: 'jimmmaaayyy',
     riot_tag_line: 'crow',
