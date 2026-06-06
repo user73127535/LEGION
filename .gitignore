@@ -3,6 +3,10 @@
 .env.local
 .env.*.local
 
+# Claude Code local config
+.claude/settings.local.json
+.claude/worktrees/
+
 # Dependencies
 node_modules/
 client/node_modules/
