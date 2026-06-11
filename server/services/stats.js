@@ -565,7 +565,7 @@ function computeCellStats(matches, cellPuuids, memberRoster = []) {
 
     // ─── TYPE: SESSION DISCIPLINE ───
     if (tilt_index && tilt_index.score >= 5.5) {
-      const maxLosses = tilt_index.judgments?.find(j => j.label === 'Maximum consecutive losses')?.text ?? tilt_index.judgments?.[1] ?? ''
+      const maxLosses = tilt_index.judgments?.[1] ?? ''
       const note = pickIdx([
         `Cell averages ${jointMatches.length > 5 ? Math.round(jointMatches.length / 7) : '2-3'} joint deployments per active session. Post-loss queue frequency shows no reduction after consecutive defeats. Session duration management is assessed as PROBABLY insufficient for sustained performance.`,
         `${maxLosses ? maxLosses + '. ' : ''}No evidence of voluntary session termination following adverse streaks in the recorded sample. Analyst assesses session pacing discipline as UNLIKELY to be a cell priority. Operational tempo: unregulated.`,
